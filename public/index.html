@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>%WEB_TITLE%</title>
+    <meta name="description" content="Share recipes with your people. Your fridge door, online." />
+
+    <!-- Installable app (PWA) -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#F6F3FA" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/icons/favicon-48.png" />
+
+    <!-- iPhone / iPad home-screen app -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Fridge" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+
+    <!-- Link previews (iMessage, Instagram, etc.) -->
+    <meta property="og:title" content="Open the Fridge" />
+    <meta property="og:description" content="Share recipes with your people." />
+    <meta property="og:image" content="/icons/icon-512.png" />
+
+    <style id="expo-reset">
+      html, body { height: 100%; background: #F6F3FA; }
+      body { overflow: hidden; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
+      #root { display: flex; height: 100%; flex: 1; }
+    </style>
+  </head>
+
+  <body>
+    <noscript>You need to enable JavaScript to run Open the Fridge.</noscript>
+    <div id="root"></div>
+    <script>
+      if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('/sw.js').catch(function () {});
+        });
+      }
+    </script>
+  </body>
+</html>

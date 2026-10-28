@@ -1,0 +1,283 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { Api } from './api';
+import type { Category } from './theme';
+import type { Comment, Group, Profile, Recipe } from './types';
+
+/**
+ * Demo backend: runs entirely on the device with sample data, so the app works
+ * before Supabase is connected. Changes are kept in local storage.
+ */
+
+type Row = Omit<Recipe, 'author' | 'like_count' | 'comment_count' | 'liked' | 'saved'> & {
+  base_likes: number;
+};
+type DB = {
+  recipes: Row[];
+  likes: string[];
+  saves: string[];
+  follows: string[];
+  blocks: string[];
+  comments: { id: string; recipe_id: string; author_id: string; body: string; created_at: string }[];
+  groups: (Omit<Group, 'member_count'> & { base_members: number })[];
+  groupPosts: { group_id: string; recipe_id: string; note: string | null; shared_by: string; created_at: string }[];
+  me: Profile;
+};
+
+const KEY = 'openthefridge-demo-v1';
+
+const people: Record<string, Profile> = {
+  maya: { id: 'maya', username: 'maya.bakes', display_name: 'Maya R.', avatar_url: null, bio: null, tiktok_handle: null },
+  jordan: { id: 'jordan', username: 'jordancooks', display_name: 'Jordan K.', avatar_url: null, bio: null, tiktok_handle: null },
+  priya: { id: 'priya', username: 'priyaeats', display_name: 'Priya S.', avatar_url: null, bio: null, tiktok_handle: null },
+  ana: { id: 'ana', username: 'ana.tapas', display_name: 'Ana T.', avatar_url: null, bio: null, tiktok_handle: null },
+  leo: { id: 'leo', username: 'leo.lunchbox', display_name: 'Leo M.', avatar_url: null, bio: null, tiktok_handle: null },
+  sam: { id: 'sam', username: 'sweetsbysam', display_name: 'Sam W.', avatar_url: null, bio: null, tiktok_handle: null },
+};
+
+const hoursAgo = (h: number) => new Date(Date.now() - h * 3600_000).toISOString();
+
+function seed(): DB {
+  const r = (
+    id: string, author_id: string, title: string, category: Category, total_time: string, servings: string,
+    base_likes: number, h: number, ingredients: [string, string][], steps: string[],
+  ): Row => ({
+    id, author_id, title, category, total_time, servings, base_likes, created_at: hoursAgo(h),
+    ingredients: ingredients.map(([qty, name]) => ({ qty, name })), steps, photos: [], slide_order: null,
+  });
+  return {
+    me: { id: 'me', username: 'you', display_name: 'You', avatar_url: null, bio: 'Home cook', tiktok_handle: null },
+    recipes: [
+      r('r1', 'maya', 'Brown Butter Cookies', 'Desserts', '30 min', '24', 128, 2,
+        [['1 cup', 'Butter, browned'], ['1 cup', 'Brown sugar'], ['2', 'Eggs'], ['2¼ cups', 'Flour'], ['1 tsp', 'Baking soda'], ['2 cups', 'Chocolate chips']],
+        ['Brown the butter and let it cool.', 'Beat in sugar and eggs.', 'Fold in flour, soda and chips.', 'Bake at 350°F for 10–12 min.']),
+      r('r2', 'jordan', 'Buffalo Chicken Dip', 'Party Food', '25 min', '10', 342, 5,
+        [['2 cups', 'Shredded chicken'], ['8 oz', 'Cream cheese'], ['½ cup', 'Hot sauce'], ['½ cup', 'Ranch'], ['1 cup', 'Cheddar']],
+        ['Mix everything except half the cheddar.', 'Top with remaining cheese.', 'Bake at 375°F for 20 min until bubbly.']),
+      r('r3', 'priya', 'Matcha Pancakes', 'Breakfast', '20 min', '4', 96, 8,
+        [['1½ cups', 'Flour'], ['1 tbsp', 'Matcha powder'], ['2 tbsp', 'Sugar'], ['1¼ cups', 'Milk'], ['1', 'Egg']],
+        ['Whisk dry ingredients.', 'Add milk and egg; stir until just combined.', 'Cook on a buttered pan, 2 min per side.']),
+      r('r4', 'ana', 'Whipped Feta Dip', 'Appetizers', '10 min', '6', 211, 26,
+        [['8 oz', 'Feta'], ['4 oz', 'Greek yogurt'], ['2 tbsp', 'Olive oil'], ['1', 'Lemon, zested'], ['', 'Honey to drizzle']],
+        ['Blend feta, yogurt and oil until smooth.', 'Top with zest and honey. Serve with pita.']),
+      r('r5', 'leo', 'Crispy Rice Salad', 'Lunch', '15 min', '2', 74, 30,
+        [['2 cups', 'Cooked rice, cold'], ['1', 'Cucumber'], ['2', 'Scallions'], ['2 tbsp', 'Soy sauce'], ['1 tbsp', 'Rice vinegar']],
+        ['Fry the rice in oil until crisp.', 'Toss with chopped veg and dressing.']),
+      r('r6', 'sam', 'Strawberry Tres Leches', 'Desserts', '1 hr', '12', 403, 50,
+        [['1', 'Vanilla sponge cake'], ['1 can', 'Condensed milk'], ['1 can', 'Evaporated milk'], ['½ cup', 'Cream'], ['2 cups', 'Strawberries']],
+        ['Poke the cake all over.', 'Pour over the three milks; chill 2 hours.', 'Top with whipped cream and berries.']),
+      r('mine1', 'me', "Grandma's Lemon Bars", 'Desserts', '45 min', '16', 12, 70,
+        [['1 cup', 'Butter, softened'], ['2 cups', 'All-purpose flour'], ['½ cup', 'Powdered sugar'], ['4', 'Large eggs'], ['1½ cups', 'Sugar'], ['⅓ cup', 'Fresh lemon juice'], ['2', 'Lemons, zested']],
+        ['Heat oven to 350°F and line a 9×13 pan with parchment.', 'Mix butter, flour and powdered sugar. Press into the pan and bake 20 min.', 'Whisk eggs, sugar, lemon juice and zest until smooth.', 'Pour over the warm crust and bake 20–25 min, until set.', 'Cool completely, dust with powdered sugar and cut into bars.']),
+    ],
+    likes: ['r2'],
+    saves: [],
+    follows: [],
+    blocks: [],
+    comments: [
+      { id: 'c1', recipe_id: 'r1', author_id: 'sam', body: 'Made these last night, unreal.', created_at: hoursAgo(1) },
+    ],
+    groups: [
+      { id: 'g1', name: 'Sunday Brunch Club', color: '#C3DEFF', invite_code: 'BRUNCH', base_members: 7 },
+      { id: 'g2', name: 'Family Recipes', color: '#FBE8A2', invite_code: 'FAMILY', base_members: 13 },
+    ],
+    groupPosts: [
+      { group_id: 'g1', recipe_id: 'mine1', note: 'Bringing these Sunday!', shared_by: 'me', created_at: hoursAgo(20) },
+      { group_id: 'g1', recipe_id: 'r3', note: null, shared_by: 'priya', created_at: hoursAgo(7) },
+    ],
+  };
+}
+
+export function createDemoApi(): Api {
+  let db: DB | null = null;
+  const listeners = new Set<() => void>();
+
+  async function load(): Promise<DB> {
+    if (db) return db;
+    try {
+      const raw = await AsyncStorage.getItem(KEY);
+      db = raw ? (JSON.parse(raw) as DB) : seed();
+    } catch {
+      db = seed();
+    }
+    return db;
+  }
+  async function save() {
+    try {
+      await AsyncStorage.setItem(KEY, JSON.stringify(db));
+    } catch {
+      /* storage unavailable — keep going in memory */
+    }
+  }
+  const person = (d: DB, id: string): Profile => (id === 'me' ? d.me : people[id]) ?? d.me;
+  const toRecipe = (d: DB, r: Row): Recipe => ({
+    ...r,
+    author: person(d, r.author_id),
+    like_count: r.base_likes + (d.likes.includes(r.id) ? 1 : 0),
+    comment_count: d.comments.filter((c) => c.recipe_id === r.id).length,
+    liked: d.likes.includes(r.id),
+    saved: d.saves.includes(r.id),
+  });
+  const newest = (a: Row, b: Row) => b.created_at.localeCompare(a.created_at);
+  const toggle = (list: string[], id: string, on: boolean) => {
+    const i = list.indexOf(id);
+    if (on && i < 0) list.push(id);
+    if (!on && i >= 0) list.splice(i, 1);
+  };
+
+  const api: Api = {
+    mode: 'demo',
+    async getMe() {
+      return (await load()).me;
+    },
+    onAuthChange(cb) {
+      listeners.add(cb);
+      return () => listeners.delete(cb);
+    },
+    async signIn() {},
+    async signUp() {
+      return { needsConfirm: false };
+    },
+    async signOut() {
+      await AsyncStorage.removeItem(KEY).catch(() => {});
+      db = null;
+      listeners.forEach((l) => l());
+    },
+    async deleteAccount() {
+      await api.signOut();
+    },
+    async updateProfile(patch) {
+      const d = await load();
+      d.me = { ...d.me, ...patch };
+      await save();
+    },
+    async stats() {
+      const d = await load();
+      return {
+        recipes: d.recipes.filter((r) => r.author_id === 'me').length,
+        groups: d.groups.length,
+        followers: 3,
+      };
+    },
+
+    async feed(category) {
+      const d = await load();
+      return d.recipes
+        .filter((r) => r.author_id !== 'me' && !d.blocks.includes(r.author_id))
+        .filter((r) => category === 'All' || r.category === category)
+        .sort(newest)
+        .map((r) => toRecipe(d, r));
+    },
+    async tin(category) {
+      const d = await load();
+      return d.recipes
+        .filter((r) => r.author_id === 'me' || d.saves.includes(r.id))
+        .filter((r) => category === 'All' || r.category === category)
+        .sort(newest)
+        .map((r) => toRecipe(d, r));
+    },
+    async recipe(id) {
+      const d = await load();
+      const r = d.recipes.find((x) => x.id === id);
+      return r ? toRecipe(d, r) : null;
+    },
+    async createRecipe(input) {
+      const d = await load();
+      const id = 'mine' + Date.now();
+      d.recipes.push({ ...input, id, author_id: 'me', created_at: new Date().toISOString(), base_likes: 0, slide_order: null });
+      await save();
+      return id;
+    },
+    async deleteRecipe(id) {
+      const d = await load();
+      d.recipes = d.recipes.filter((r) => r.id !== id);
+      d.groupPosts = d.groupPosts.filter((p) => p.recipe_id !== id);
+      await save();
+    },
+    async setSlideOrder(id, order) {
+      const d = await load();
+      const r = d.recipes.find((x) => x.id === id);
+      if (r) r.slide_order = order;
+      await save();
+    },
+    async setLiked(id, on) {
+      const d = await load();
+      toggle(d.likes, id, on);
+      await save();
+    },
+    async setSaved(id, on) {
+      const d = await load();
+      toggle(d.saves, id, on);
+      await save();
+    },
+
+    async isFollowing(userId) {
+      return (await load()).follows.includes(userId);
+    },
+    async setFollowing(userId, on) {
+      const d = await load();
+      toggle(d.follows, userId, on);
+      await save();
+    },
+    async report() {},
+    async block(userId) {
+      const d = await load();
+      toggle(d.blocks, userId, true);
+      toggle(d.follows, userId, false);
+      await save();
+    },
+
+    async comments(recipeId) {
+      const d = await load();
+      return d.comments
+        .filter((c) => c.recipe_id === recipeId)
+        .map((c) => ({ id: c.id, recipe_id: c.recipe_id, body: c.body, created_at: c.created_at, author: person(d, c.author_id) })) as Comment[];
+    },
+    async addComment(recipeId, body) {
+      const d = await load();
+      d.comments.push({ id: 'c' + Date.now(), recipe_id: recipeId, author_id: 'me', body, created_at: new Date().toISOString() });
+      await save();
+    },
+
+    async groups() {
+      const d = await load();
+      return d.groups.map(({ base_members, ...g }) => ({ ...g, member_count: base_members + 1 }));
+    },
+    async group(id) {
+      return (await api.groups()).find((g) => g.id === id) ?? null;
+    },
+    async createGroup(name, color) {
+      const d = await load();
+      const id = 'g' + Date.now();
+      d.groups.push({ id, name, color, invite_code: Math.random().toString(36).slice(2, 8).toUpperCase(), base_members: 0 });
+      await save();
+      return id;
+    },
+    async joinGroup(code) {
+      const d = await load();
+      const g = d.groups.find((x) => x.invite_code === code.trim().toUpperCase());
+      if (!g) throw new Error('No group with that code. (Demo mode only knows BRUNCH and FAMILY.)');
+      return g.id;
+    },
+    async groupFeed(groupId) {
+      const d = await load();
+      return d.groupPosts
+        .filter((p) => p.group_id === groupId)
+        .sort((a, b) => b.created_at.localeCompare(a.created_at))
+        .map((p) => {
+          const r = d.recipes.find((x) => x.id === p.recipe_id);
+          return r ? { recipe: toRecipe(d, r), note: p.note, shared_by: person(d, p.shared_by), created_at: p.created_at } : null;
+        })
+        .filter((x): x is NonNullable<typeof x> => !!x);
+    },
+    async shareToGroups(recipeId, groupIds, note) {
+      const d = await load();
+      for (const group_id of groupIds) {
+        if (!d.groupPosts.some((p) => p.group_id === group_id && p.recipe_id === recipeId)) {
+          d.groupPosts.push({ group_id, recipe_id: recipeId, note: note || null, shared_by: 'me', created_at: new Date().toISOString() });
+        }
+      }
+      await save();
+    },
+  };
+  return api;
+}

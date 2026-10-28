@@ -1,0 +1,229 @@
+-- Open the Fridge database schema
+-- Paste this whole file into Supabase → SQL Editor → New query → Run.
+-- Safe to run once on a fresh project.
+
+
+-- ───────────── Profiles ─────────────
+create table public.profiles (
+  id uuid primary key references auth.users (id) on delete cascade,
+  username text unique not null,
+  display_name text not null default '',
+  avatar_url text,
+  bio text,
+  tiktok_handle text,
+  created_at timestamptz not null default now()
+);
+
+-- Create a profile automatically when someone signs up.
+create function public.handle_new_user() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.profiles (id, username, display_name)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data ->> 'username', 'cook' || substr(new.id::text, 1, 8)),
+    coalesce(new.raw_user_meta_data ->> 'display_name', '')
+  );
+  return new;
+end $$;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+-- ───────────── Recipes ─────────────
+create table public.recipes (
+  id uuid primary key default gen_random_uuid(),
+  author_id uuid not null references public.profiles (id) on delete cascade,
+  title text not null check (char_length(title) between 1 and 120),
+  category text not null check (category in ('Desserts','Appetizers','Breakfast','Lunch','Party Food')),
+  total_time text not null default '',
+  servings text not null default '',
+  ingredients jsonb not null default '[]',
+  steps jsonb not null default '[]',
+  photos text[] not null default '{}',
+  slide_order text[],
+  is_public boolean not null default true,
+  created_at timestamptz not null default now()
+);
+create index recipes_created_idx on public.recipes (created_at desc);
+
+create table public.likes (
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  recipe_id uuid not null references public.recipes (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (user_id, recipe_id)
+);
+
+-- "Save to Tin"
+create table public.saves (
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  recipe_id uuid not null references public.recipes (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (user_id, recipe_id)
+);
+
+create table public.comments (
+  id uuid primary key default gen_random_uuid(),
+  recipe_id uuid not null references public.recipes (id) on delete cascade,
+  author_id uuid not null references public.profiles (id) on delete cascade,
+  body text not null check (char_length(body) between 1 and 1000),
+  created_at timestamptz not null default now()
+);
+
+create table public.follows (
+  follower_id uuid not null references public.profiles (id) on delete cascade,
+  following_id uuid not null references public.profiles (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (follower_id, following_id),
+  check (follower_id <> following_id)
+);
+
+-- ───────────── Groups ─────────────
+create table public.groups (
+  id uuid primary key default gen_random_uuid(),
+  name text not null check (char_length(name) between 1 and 60),
+  color text not null default '#C3DEFF',
+  owner_id uuid not null references public.profiles (id) on delete cascade,
+  invite_code text not null unique default upper(substr(md5(gen_random_uuid()::text), 1, 6)),
+  created_at timestamptz not null default now()
+);
+
+create table public.group_members (
+  group_id uuid not null references public.groups (id) on delete cascade,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  joined_at timestamptz not null default now(),
+  primary key (group_id, user_id)
+);
+
+create table public.group_recipes (
+  group_id uuid not null references public.groups (id) on delete cascade,
+  recipe_id uuid not null references public.recipes (id) on delete cascade,
+  shared_by uuid not null references public.profiles (id) on delete cascade,
+  note text,
+  created_at timestamptz not null default now(),
+  primary key (group_id, recipe_id)
+);
+
+-- Membership check used by policies (security definer avoids policy recursion).
+create function public.is_group_member(gid uuid) returns boolean
+language sql security definer stable set search_path = public as $$
+  select exists (select 1 from group_members where group_id = gid and user_id = auth.uid());
+$$;
+
+-- Owner automatically becomes a member.
+create function public.add_owner_as_member() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into group_members (group_id, user_id) values (new.id, new.owner_id);
+  return new;
+end $$;
+create trigger on_group_created after insert on public.groups
+  for each row execute function public.add_owner_as_member();
+
+-- Join a group with its invite code.
+create function public.join_group(code text) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare gid uuid;
+begin
+  select id into gid from groups where invite_code = upper(trim(code));
+  if gid is null then raise exception 'No group with that code'; end if;
+  insert into group_members (group_id, user_id) values (gid, auth.uid()) on conflict do nothing;
+  return gid;
+end $$;
+
+-- ───────────── Safety (required by the App Store for social apps) ─────────────
+create table public.reports (
+  id uuid primary key default gen_random_uuid(),
+  reporter_id uuid not null references public.profiles (id) on delete cascade,
+  recipe_id uuid references public.recipes (id) on delete cascade,
+  reported_user_id uuid references public.profiles (id) on delete cascade,
+  reason text not null,
+  created_at timestamptz not null default now()
+);
+
+create table public.blocks (
+  blocker_id uuid not null references public.profiles (id) on delete cascade,
+  blocked_id uuid not null references public.profiles (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (blocker_id, blocked_id)
+);
+
+-- ───────────── Row level security ─────────────
+alter table public.profiles enable row level security;
+alter table public.recipes enable row level security;
+alter table public.likes enable row level security;
+alter table public.saves enable row level security;
+alter table public.comments enable row level security;
+alter table public.follows enable row level security;
+alter table public.groups enable row level security;
+alter table public.group_members enable row level security;
+alter table public.group_recipes enable row level security;
+alter table public.reports enable row level security;
+alter table public.blocks enable row level security;
+
+create policy "profiles are readable" on public.profiles for select to authenticated using (true);
+create policy "edit own profile" on public.profiles for update to authenticated using (id = auth.uid());
+
+create policy "read public or own or group recipes" on public.recipes for select to authenticated using (
+  is_public or author_id = auth.uid()
+  or exists (select 1 from group_recipes gr where gr.recipe_id = id and public.is_group_member(gr.group_id))
+);
+create policy "create own recipes" on public.recipes for insert to authenticated with check (author_id = auth.uid());
+create policy "edit own recipes" on public.recipes for update to authenticated using (author_id = auth.uid());
+create policy "delete own recipes" on public.recipes for delete to authenticated using (author_id = auth.uid());
+
+create policy "likes readable" on public.likes for select to authenticated using (true);
+create policy "like as self" on public.likes for insert to authenticated with check (user_id = auth.uid());
+create policy "unlike as self" on public.likes for delete to authenticated using (user_id = auth.uid());
+
+create policy "own saves" on public.saves for select to authenticated using (user_id = auth.uid());
+create policy "save as self" on public.saves for insert to authenticated with check (user_id = auth.uid());
+create policy "unsave as self" on public.saves for delete to authenticated using (user_id = auth.uid());
+
+create policy "comments readable" on public.comments for select to authenticated using (true);
+create policy "comment as self" on public.comments for insert to authenticated with check (author_id = auth.uid());
+create policy "delete own comments" on public.comments for delete to authenticated using (author_id = auth.uid());
+
+create policy "follows readable" on public.follows for select to authenticated using (true);
+create policy "follow as self" on public.follows for insert to authenticated with check (follower_id = auth.uid());
+create policy "unfollow as self" on public.follows for delete to authenticated using (follower_id = auth.uid());
+
+create policy "members see groups" on public.groups for select to authenticated using (public.is_group_member(id) or owner_id = auth.uid());
+create policy "create groups" on public.groups for insert to authenticated with check (owner_id = auth.uid());
+create policy "owner edits group" on public.groups for update to authenticated using (owner_id = auth.uid());
+create policy "owner deletes group" on public.groups for delete to authenticated using (owner_id = auth.uid());
+
+create policy "members see members" on public.group_members for select to authenticated using (public.is_group_member(group_id));
+create policy "leave group" on public.group_members for delete to authenticated using (user_id = auth.uid());
+
+create policy "members see group recipes" on public.group_recipes for select to authenticated using (public.is_group_member(group_id));
+create policy "members share to group" on public.group_recipes for insert to authenticated
+  with check (shared_by = auth.uid() and public.is_group_member(group_id));
+create policy "sharer removes" on public.group_recipes for delete to authenticated using (shared_by = auth.uid());
+
+create policy "file reports" on public.reports for insert to authenticated with check (reporter_id = auth.uid());
+
+create policy "own blocks" on public.blocks for select to authenticated using (blocker_id = auth.uid());
+create policy "block as self" on public.blocks for insert to authenticated with check (blocker_id = auth.uid());
+create policy "unblock as self" on public.blocks for delete to authenticated using (blocker_id = auth.uid());
+
+-- ───────────── Photo storage ─────────────
+insert into storage.buckets (id, name, public) values ('recipe-photos', 'recipe-photos', true)
+  on conflict (id) do nothing;
+
+create policy "anyone can view recipe photos" on storage.objects for select
+  using (bucket_id = 'recipe-photos');
+create policy "upload into own folder" on storage.objects for insert to authenticated
+  with check (bucket_id = 'recipe-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "delete own photos" on storage.objects for delete to authenticated
+  using (bucket_id = 'recipe-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ───────────── Account deletion (required by the App Store) ─────────────
+create function public.delete_my_account() returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  delete from auth.users where id = auth.uid();
+end $$;
+revoke all on function public.delete_my_account() from public, anon;
+grant execute on function public.delete_my_account() to authenticated;

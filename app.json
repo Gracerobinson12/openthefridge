@@ -1,13 +1,18 @@
 {
   "expo": {
-    "name": "recipe-tin",
-    "slug": "recipe-tin",
+    "name": "Open the Fridge",
+    "slug": "openthefridge",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.gratiacore.openthefridge",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Open the Fridge uses your photos so you can add pictures to your recipes.",
+        "NSCameraUsageDescription": "Open the Fridge uses the camera so you can take pictures of your recipes."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -16,10 +21,30 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.gratiacore.openthefridge"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/favicon.png",
+      "output": "single",
+      "bundler": "metro",
+      "name": "Open the Fridge",
+      "shortName": "Fridge",
+      "themeColor": "#F6F3FA",
+      "backgroundColor": "#F6F3FA",
+      "description": "Share recipes with your people. Your fridge door, online."
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-splash-screen",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Open the Fridge uses your photos so you can add pictures to your recipes."
+        }
+      ]
+    ],
+    "scheme": "openthefridge"
   }
 }
