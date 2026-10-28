@@ -55,7 +55,7 @@ npx expo start
    EXPO_PUBLIC_SUPABASE_KEY=your-publishable-key
    ```
 5. Restart `npx expo start`. You'll now see the sign-in screen — create an account and you're live.
-6. **Authentication → URL Configuration:** set **Site URL** to `https://recipes.gratiacore.com`.
+6. **Authentication → URL Configuration:** set **Site URL** to `https://openthefridge.gratiacore.com`.
 
 > The publishable/anon key is meant to be public; the security rules in `schema.sql` protect the data. Never put the `service_role` key in the app.
 
@@ -67,7 +67,7 @@ npx expo start
 2. At [vercel.com](https://vercel.com) → **Add New → Project** → import the repo.
    `vercel.json` already sets the build (`npx expo export --platform web`) and output (`dist`).
 3. Under **Environment Variables**, add the same `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_KEY`. Deploy.
-4. In the project → **Settings → Domains** → add `recipes.gratiacore.com`.
+4. In the project → **Settings → Domains** → add `openthefridge.gratiacore.com`.
    Vercel shows you a DNS record (usually a **CNAME** named `recipes`).
 5. At your domain registrar's DNS settings, add exactly that record. It can take a few minutes to an hour to go live.
 
@@ -116,7 +116,7 @@ The bundle id is `com.gratiacore.openthefridge` (in `app.json`); change it befor
 **Still to do (needs TikTok's approval):**
 
 1. Register an app at [developers.tiktok.com](https://developers.tiktok.com) and request the **Content Posting API** (photo posts) and **Login Kit**.
-2. TikTok reviews the app. Photo posts pull images from web addresses, and TikTok asks you to verify the domain they come from, so `recipes.gratiacore.com` works well for that.
+2. TikTok reviews the app. Photo posts pull images from web addresses, and TikTok asks you to verify the domain they come from, so `openthefridge.gratiacore.com` works well for that.
 3. Add a small server function (e.g. a Supabase Edge Function) that renders each slide to an image, uploads it, and calls TikTok's API. The hook for it is the `post()` function in `src/app/slides/[id].tsx`.
 
 Sharing your own TikTok videos is marked **Coming soon** in Profile (v2).
