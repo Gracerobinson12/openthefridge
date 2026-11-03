@@ -8,8 +8,8 @@ export function DemoBanner() {
   if (api.mode !== 'demo') return null;
   return (
     <Glass radius={18} strong style={{ paddingVertical: 10, paddingHorizontal: 14 }}>
-      <T w="semibold" size={13}>Demo mode</T>
-      <T size={12} color={colors.ink2}>Sample data, saved only on this device. Connect Supabase to go live.</T>
+      <T w="semibold" size={13}>Test mode</T>
+      <T size={12} color={colors.ink2}>Sample recipes and accounts saved only in this browser. Connect Supabase to go live.</T>
     </Glass>
   );
 }

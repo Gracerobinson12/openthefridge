@@ -1,5 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Icon } from '../../components/Icon';
@@ -11,6 +11,9 @@ import { colors } from '../../lib/theme';
 
 export default function Profile() {
   const { api, me, refreshMe } = useApp();
+  const params = useLocalSearchParams<{ reset?: string }>();
+  const [pwOpen, setPwOpen] = useState(params.reset === '1');
+  const [newPw, setNewPw] = useState('');
   const { data: stats } = useData((a) => a.stats(), []);
   const { data: mine } = useData((a) => a.tin('All'), []);
   const own = (mine ?? []).filter((r) => r.author_id === me?.id).slice(0, 6);
@@ -45,14 +48,33 @@ export default function Profile() {
     }
   }
   async function signOut() {
-    const msg = api.mode === 'demo' ? 'In demo mode this resets the sample data on this device.' : 'You can sign back in any time.';
-    if (await confirm('Sign out?', msg, api.mode === 'demo' ? 'Reset' : 'Sign out')) await api.signOut();
+    if (await confirm('Log out?', 'You can log back in any time.', 'Log out')) {
+      await api.signOut();
+      router.replace('/welcome');
+    }
   }
-
+  async function resetTestData() {
+    if (await confirm('Reset test data?', 'Deletes the test accounts and sample recipes saved in this browser.', 'Reset')) {
+      await api.deleteAccount();
+      router.replace('/welcome');
+    }
+  }
+  async function savePassword() {
+    if (newPw.length < 8) return notify('Password too short', 'Use at least 8 characters.');
+    try {
+      await api.changePassword(newPw);
+      setNewPw('');
+      setPwOpen(false);
+      notify('Password updated');
+    } catch (e) {
+      notify('Couldn’t update password', (e as Error).message);
+    }
+  }
   async function deleteAccount() {
     if (!(await confirm('Delete your account?', 'This permanently deletes your profile, recipes, comments and groups you own. It can’t be undone.', 'Delete'))) return;
     try {
       await api.deleteAccount();
+      router.replace('/welcome');
     } catch (e) {
       notify('Couldn’t delete account', (e as Error).message);
     }
@@ -134,8 +156,23 @@ export default function Profile() {
       </View>
       {own.length === 0 ? <T size={14} color={colors.ink2}>You haven’t added a recipe yet.</T> : null}
 
-      <Button title={api.mode === 'demo' ? 'Reset demo data' : 'Sign out'} variant="ghost" onPress={signOut} />
-      {api.mode === 'live' ? <Button title="Delete my account" variant="ghost" onPress={deleteAccount} /> : null}
+      <Label>ACCOUNT</Label>
+      {pwOpen ? (
+        <Glass radius={22} style={{ padding: 14, gap: 10 }}>
+          <Input value={newPw} onChangeText={setNewPw} placeholder="New password (8+ characters)" secureTextEntry accessibilityLabel="New password" autoComplete="new-password" />
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <Button title="Cancel" variant="soft" style={{ flex: 1 }} onPress={() => setPwOpen(false)} />
+            <Button title="Save password" style={{ flex: 1 }} onPress={savePassword} />
+          </View>
+        </Glass>
+      ) : null}
+      <Glass radius={22}>
+        {!pwOpen ? <Row onPress={() => setPwOpen(true)}><T w="semibold" size={15}>Change password</T></Row> : null}
+        <Row onPress={() => router.push('/legal')}><T w="semibold" size={15}>Terms & Privacy</T></Row>
+        <Row onPress={signOut}><T w="semibold" size={15}>Log out</T></Row>
+        {api.mode === 'demo' ? <Row onPress={resetTestData}><T w="semibold" size={15} color={colors.ink2}>Reset test data</T></Row> : null}
+        <Row last onPress={api.mode === 'demo' ? resetTestData : deleteAccount}><T w="semibold" size={15} color={colors.heart}>Delete my account</T></Row>
+      </Glass>
     </Screen>
   );
 }

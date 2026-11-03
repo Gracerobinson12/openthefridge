@@ -100,6 +100,15 @@ export function createLiveApi(sb: SupabaseClient): Api {
     async signOut() {
       await sb.auth.signOut();
     },
+    async resetPassword(email) {
+      const redirectTo = typeof window !== 'undefined' && window.location ? `${window.location.origin}/profile?reset=1` : undefined;
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
+      if (error) throw new Error(error.message);
+    },
+    async changePassword(password) {
+      const { error } = await sb.auth.updateUser({ password });
+      if (error) throw new Error(error.message);
+    },
     async deleteAccount() {
       const res = await sb.rpc('delete_my_account');
       if (res.error) throw new Error(res.error.message);

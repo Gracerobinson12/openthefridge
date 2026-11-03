@@ -10,17 +10,24 @@ import { colors } from '../lib/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-/** Sends signed-out people to the sign-in screen (live mode only). */
+/** Sends signed-out people to the welcome screen, and signed-in people past it. */
 function AuthGate() {
   const { api, me, ready } = useApp();
   const segments = useSegments();
   useEffect(() => {
-    if (!ready || api.mode === 'demo') return;
-    const onSignIn = segments[0] === 'sign-in';
-    if (!me && !onSignIn) router.replace('/sign-in');
-    if (me && onSignIn) router.replace('/');
-  }, [ready, me, segments, api.mode]);
+    if (!ready) return;
+    const open = ['welcome', 'sign-in', 'legal'].includes(segments[0] as string);
+    if (!me && !open) router.replace('/welcome');
+    if (me && (segments[0] === 'welcome' || segments[0] === 'sign-in')) router.replace('/');
+  }, [ready, me, segments]);
   return null;
+}
+
+/** Covers the screen until we know whether someone is signed in. */
+function Splash() {
+  const { ready } = useApp();
+  if (ready) return null;
+  return <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: colors.bg, zIndex: 10 }} />;
 }
 
 export default function RootLayout() {
@@ -35,11 +42,13 @@ export default function RootLayout() {
       <AppProvider>
         <StatusBar style="dark" />
         <AuthGate />
+        <Splash />
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="add" options={{ presentation: 'modal' }} />
           <Stack.Screen name="share/[id]" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="sign-in" options={{ animation: 'fade' }} />
+          <Stack.Screen name="welcome" options={{ animation: 'fade' }} />
+          <Stack.Screen name="sign-in" />
         </Stack>
       </AppProvider>
     </SafeAreaProvider>

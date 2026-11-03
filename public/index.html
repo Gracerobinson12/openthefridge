@@ -35,7 +35,15 @@
     <noscript>You need to enable JavaScript to run Open the Fridge.</noscript>
     <div id="root"></div>
     <script>
-      if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
+      // Keep the browser's install prompt so the Install button can show it later.
+      window.__otfPrompt = null;
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        window.__otfPrompt = e;
+        window.dispatchEvent(new Event('otf-installable'));
+      });
+      // Skipped on the live-reload dev server (port 8081) so code edits always show up.
+      if ('serviceWorker' in navigator && location.port !== '8081') {
         window.addEventListener('load', function () {
           navigator.serviceWorker.register('/sw.js').catch(function () {});
         });

@@ -43,6 +43,11 @@ npx expo start
 
 ---
 
+### Test sign-up, log-in and Install on your computer
+
+- `npx expo start --web` → live editing at `localhost:8081`. You land on the welcome screen; **Create an account** and **Log in** work in test mode (accounts saved only in that browser).
+- `npm run preview` → builds the real website and serves it at `localhost:3000`. Open it in **Chrome**: the **Install Open the Fridge** button appears on the welcome screen (Chrome can take a few seconds or one refresh to offer it). On iPhone the button shows the “Add to Home Screen” steps instead.
+
 ## 2. Set up the backend — Supabase (10 min, free)
 
 1. Create an account at [supabase.com](https://supabase.com) → **New project**.

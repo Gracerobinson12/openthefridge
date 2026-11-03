@@ -21,9 +21,11 @@ type DB = {
   groups: (Omit<Group, 'member_count'> & { base_members: number })[];
   groupPosts: { group_id: string; recipe_id: string; note: string | null; shared_by: string; created_at: string }[];
   me: Profile;
+  accounts: { email: string; password: string; username: string; display_name: string }[];
+  session: string | null;
 };
 
-const KEY = 'openthefridge-demo-v1';
+const KEY = 'openthefridge-demo-v2';
 
 const people: Record<string, Profile> = {
   maya: { id: 'maya', username: 'maya.bakes', display_name: 'Maya R.', avatar_url: null, bio: null, tiktok_handle: null },
@@ -45,7 +47,9 @@ function seed(): DB {
     ingredients: ingredients.map(([qty, name]) => ({ qty, name })), steps, photos: [], slide_order: null,
   });
   return {
-    me: { id: 'me', username: 'you', display_name: 'You', avatar_url: null, bio: 'Home cook', tiktok_handle: null },
+    me: { id: 'me', username: 'you', display_name: 'You', avatar_url: null, bio: null, tiktok_handle: null },
+    accounts: [],
+    session: null,
     recipes: [
       r('r1', 'maya', 'Brown Butter Cookies', 'Desserts', '30 min', '24', 128, 2,
         [['1 cup', 'Butter, browned'], ['1 cup', 'Brown sugar'], ['2', 'Eggs'], ['2¼ cups', 'Flour'], ['1 tsp', 'Baking soda'], ['2 cups', 'Chocolate chips']],
@@ -127,23 +131,56 @@ export function createDemoApi(): Api {
   const api: Api = {
     mode: 'demo',
     async getMe() {
-      return (await load()).me;
+      const d = await load();
+      return d.session ? d.me : null;
     },
     onAuthChange(cb) {
       listeners.add(cb);
       return () => listeners.delete(cb);
     },
-    async signIn() {},
-    async signUp() {
+    // Test-mode accounts live only in this browser/device. Real accounts come from Supabase.
+    async signIn(email, password) {
+      const d = await load();
+      const acct = d.accounts.find((a) => a.email === email.toLowerCase());
+      if (!acct || acct.password !== password) throw new Error('Wrong email or password.');
+      d.me = { ...d.me, username: acct.username, display_name: acct.display_name };
+      d.session = acct.email;
+      await save();
+      listeners.forEach((l) => l());
+    },
+    async signUp(email, password, username, displayName) {
+      const d = await load();
+      const e = email.toLowerCase();
+      if (d.accounts.some((a) => a.email === e)) throw new Error('That email already has an account. Try logging in.');
+      if (d.accounts.some((a) => a.username === username) || Object.values(people).some((p) => p.username === username)) {
+        throw new Error('That username is taken. Try another.');
+      }
+      d.accounts.push({ email: e, password, username, display_name: displayName });
+      d.me = { ...d.me, username, display_name: displayName };
+      d.session = e;
+      await save();
+      listeners.forEach((l) => l());
       return { needsConfirm: false };
     },
     async signOut() {
+      const d = await load();
+      d.session = null;
+      await save();
+      listeners.forEach((l) => l());
+    },
+    async deleteAccount() {
       await AsyncStorage.removeItem(KEY).catch(() => {});
       db = null;
       listeners.forEach((l) => l());
     },
-    async deleteAccount() {
-      await api.signOut();
+    async resetPassword() {
+      throw new Error('Password reset emails work once the app is connected to Supabase.');
+    },
+    async changePassword(password) {
+      const d = await load();
+      const acct = d.accounts.find((a) => a.email === d.session);
+      if (acct) acct.password = password;
+      await save();
     },
     async updateProfile(patch) {
       const d = await load();

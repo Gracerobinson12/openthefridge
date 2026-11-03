@@ -17,6 +17,8 @@ export interface Api {
   signUp(email: string, password: string, username: string, displayName: string): Promise<{ needsConfirm: boolean }>;
   signOut(): Promise<void>;
   deleteAccount(): Promise<void>;
+  resetPassword(email: string): Promise<void>;
+  changePassword(password: string): Promise<void>;
   updateProfile(patch: Partial<Pick<Profile, 'display_name' | 'bio' | 'tiktok_handle' | 'avatar_url'>>): Promise<void>;
   stats(): Promise<ProfileStats>;
 
