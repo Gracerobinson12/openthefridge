@@ -6,6 +6,7 @@ import { Icon } from '../../components/Icon';
 import { Backdrop, Button, Glass, Input, Label, Photo, Row, Switch, T } from '../../components/ui';
 import { SITE_URL } from '../../lib/config';
 import { notify } from '../../lib/dialog';
+import { hasBlockedWord, KIND_MESSAGE } from '../../lib/filter';
 import { useApp, useData } from '../../lib/store';
 import { colors } from '../../lib/theme';
 
@@ -36,6 +37,7 @@ export default function ShareSheet() {
   }
 
   async function submit() {
+    if (hasBlockedWord(note)) return notify('Let’s keep it kind', KIND_MESSAGE);
     setBusy(true);
     try {
       if (chosen.length) await api.shareToGroups(id, chosen, note.trim());

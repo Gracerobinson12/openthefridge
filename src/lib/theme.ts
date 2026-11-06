@@ -22,7 +22,7 @@ export const font = {
   heavy: 'Inter_800ExtraBold',
 };
 
-export const CATEGORIES = ['Desserts', 'Appetizers', 'Breakfast', 'Lunch', 'Party Food'] as const;
+export const CATEGORIES = ['Desserts', 'Appetizers', 'Breakfast', 'Lunch', 'Party Food', 'Holiday'] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 /** Pastel tile color and stronger dot color for each category. */
@@ -32,6 +32,7 @@ export const categoryStyle: Record<Category, { pastel: string; dot: string }> = 
   Breakfast: { pastel: '#FBE8A2', dot: '#E0B530' },
   Lunch: { pastel: '#C3DEFF', dot: '#5B9BEA' },
   'Party Food': { pastel: '#DCD1FF', dot: '#9B7BF0' },
+  Holiday: { pastel: '#FFD9C2', dot: '#D9653B' },
 };
 
 export const GROUP_COLORS = ['#FFC7D6', '#C3DEFF', '#FBE8A2', '#DCD1FF', '#B8EBD5', '#FFD7B5'];

@@ -5,13 +5,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../../components/Icon';
 import { timeAgo } from '../../components/RecipePost';
 import { Avatar, Button, Floating, Glass, IconButton, Input, Loading, Photo, T } from '../../components/ui';
-import { choose, confirm, notify } from '../../lib/dialog';
+import { REPORT_REASONS, useActionSheet } from '../../components/ActionSheet';
+import { confirm, notify } from '../../lib/dialog';
+import { hasBlockedWord, KIND_MESSAGE } from '../../lib/filter';
+import type { Comment } from '../../lib/types';
 import { useApp, useData } from '../../lib/store';
 import { colors, shadow } from '../../lib/theme';
 
 export default function RecipeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { api, me, changed } = useApp();
+  const sheet = useActionSheet();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { data: recipe, loading } = useData((a) => a.recipe(id), [id]);
@@ -47,7 +51,7 @@ export default function RecipeScreen() {
   async function more() {
     if (!recipe) return;
     if (mine) {
-      const i = await choose('Recipe options', ['Delete recipe']);
+      const i = await sheet('Recipe options', [{ label: 'Delete recipe', destructive: true }]);
       if (i === 0 && (await confirm('Delete this recipe?', 'This can’t be undone.', 'Delete'))) {
         await api.deleteRecipe(recipe.id);
         changed();
@@ -55,10 +59,12 @@ export default function RecipeScreen() {
       }
       return;
     }
-    const i = await choose('Options', ['Report this recipe', `Block @${recipe.author.username}`]);
+    const i = await sheet(recipe.title, [{ label: 'Report recipe', destructive: true }, { label: `Block @${recipe.author.username}`, destructive: true }]);
     if (i === 0) {
-      await api.report(recipe.id, recipe.author_id, 'Reported from recipe screen');
-      notify('Thanks for reporting', 'We’ll take a look.');
+      const r = await sheet('Why are you reporting this?', REPORT_REASONS.map((label) => ({ label })));
+      if (r < 0) return;
+      await api.report({ recipeId: recipe.id, reportedUserId: recipe.author_id, reason: REPORT_REASONS[r] }).catch(() => {});
+      notify('Thanks for reporting', 'We review reports within 24 hours. Recipes reported by several people are hidden right away.');
     } else if (i === 1 && (await confirm(`Block @${recipe.author.username}?`, 'You won’t see their recipes on your Fridge anymore.', 'Block'))) {
       await api.block(recipe.author_id);
       changed();
@@ -66,9 +72,31 @@ export default function RecipeScreen() {
     }
   }
 
+  async function commentMenu(c: Comment) {
+    const own = c.author.id === me?.id;
+    const canDelete = own || mine || me?.is_admin;
+    const opts = [...(canDelete ? [{ label: 'Delete comment', destructive: true }] : []), ...(!own ? [{ label: 'Report comment', destructive: true }, { label: `Block @${c.author.username}`, destructive: true }] : [])];
+    const i = await sheet('Comment', opts);
+    if (i < 0) return;
+    const pick = opts[i].label;
+    if (pick === 'Delete comment') {
+      await api.deleteComment(c.id).catch((e) => notify('Couldn’t delete', e.message));
+      reloadComments();
+    } else if (pick === 'Report comment') {
+      const r = await sheet('Why are you reporting this?', REPORT_REASONS.map((label) => ({ label })));
+      if (r < 0) return;
+      await api.report({ commentId: c.id, recipeId: id, reportedUserId: c.author.id, reason: REPORT_REASONS[r] }).catch(() => {});
+      notify('Thanks for reporting', 'We review reports within 24 hours.');
+    } else if (await confirm(`Block @${c.author.username}?`, 'You won’t see their recipes or comments anymore.', 'Block')) {
+      await api.block(c.author.id);
+      changed();
+    }
+  }
+
   async function sendComment() {
     const body = comment.trim();
     if (!body) return;
+    if (hasBlockedWord(body)) return notify('Let’s keep it kind', KIND_MESSAGE);
     setComment('');
     await api.addComment(id, body).catch((e) => notify('Couldn’t post comment', e.message));
     reloadComments();
@@ -162,6 +190,9 @@ export default function RecipeScreen() {
                     <T w="bold" size={13}>@{c.author.username} <T size={12} color={colors.ink3}>{timeAgo(c.created_at)}</T></T>
                     <T size={14}>{c.body}</T>
                   </View>
+                  <Pressable onPress={() => commentMenu(c)} accessibilityRole="button" accessibilityLabel="Comment options" hitSlop={8} style={{ padding: 4 }}>
+                    <Icon name="more" size={18} color={colors.ink3} />
+                  </Pressable>
                 </View>
               ))}
               {comments?.length === 0 ? <T size={14} color={colors.ink2}>No comments yet. Say something nice!</T> : null}

@@ -5,6 +5,7 @@ import { Icon } from '../../components/Icon';
 import { Screen } from '../../components/Screen';
 import { Button, Empty, Glass, Input, Label, Loading, Row, T } from '../../components/ui';
 import { notify } from '../../lib/dialog';
+import { hasBlockedWord, KIND_MESSAGE } from '../../lib/filter';
 import { useApp, useData } from '../../lib/store';
 import { colors, GROUP_COLORS } from '../../lib/theme';
 
@@ -18,6 +19,7 @@ export default function Groups() {
 
   async function create() {
     if (!name.trim()) return;
+    if (hasBlockedWord(name)) return notify('Let’s keep it kind', KIND_MESSAGE);
     setBusy('create');
     try {
       const id = await api.createGroup(name.trim(), color);

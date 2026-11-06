@@ -3,7 +3,10 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
 import { Screen } from '../components/Screen';
 import { Button, Glass, IconButton, Input, T } from '../components/ui';
+import { Icon } from '../components/Icon';
 import { notify } from '../lib/dialog';
+import { hasBlockedWord, KIND_MESSAGE } from '../lib/filter';
+import { LEGAL } from '../lib/legal';
 import { useApp } from '../lib/store';
 import { colors } from '../lib/theme';
 
@@ -18,6 +21,7 @@ export default function SignIn() {
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState<string | null>(null);
+  const [agreed, setAgreed] = useState(false);
 
   const up = mode === 'up';
 
@@ -27,9 +31,15 @@ export default function SignIn() {
     if (password.length < 8) return notify('Password too short', 'Use at least 8 characters.');
     if (up && !name.trim()) return notify('Add your name', 'This is what people see on your recipes.');
     if (up && !/^[a-z0-9._]{3,24}$/i.test(username.trim())) return notify('Pick a username', '3–24 letters, numbers, dots or underscores. No spaces.');
+    if (up && hasBlockedWord(name, username.replace(/[._]/g, ' '))) return notify('Let’s keep it kind', KIND_MESSAGE);
+    if (up && !agreed) return notify('One more thing', `Please confirm you're ${LEGAL.minAge} or older and agree to the Terms, Privacy Policy and Community Guidelines.`);
     setBusy(true);
     try {
       if (up) {
+        if (!(await api.usernameAvailable(username.trim()))) {
+          notify('Username taken', `@${username.trim().toLowerCase()} is already taken. Try another.`);
+          return;
+        }
         const { needsConfirm } = await api.signUp(e, password, username.trim().toLowerCase(), name.trim());
         if (needsConfirm) {
           setSent(e);
@@ -101,6 +111,21 @@ export default function SignIn() {
               <T w="semibold" size={13} color={colors.accent}>{showPw ? 'Hide' : 'Show'}</T>
             </Pressable>
           </View>
+          {up ? (
+            <Pressable onPress={() => setAgreed(!agreed)} accessibilityRole="checkbox" accessibilityState={{ checked: agreed }}
+              style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start', paddingVertical: 4, paddingHorizontal: 2 }}>
+              <View style={{ width: 22, height: 22, marginTop: 1, borderRadius: 7, borderWidth: agreed ? 0 : 1.5, borderColor: 'rgba(20,17,26,0.35)', backgroundColor: agreed ? colors.ink : colors.white, alignItems: 'center', justifyContent: 'center' }}>
+                {agreed ? <Icon name="check" size={14} color={colors.white} strokeWidth={3.2} /> : null}
+              </View>
+              <T size={13} color={colors.ink2} style={{ flex: 1, lineHeight: 19 }}>
+                I'm {LEGAL.minAge} or older and agree to the{' '}
+                <T size={13} w="semibold" color={colors.accent} onPress={() => router.push('/terms')}>Terms</T>,{' '}
+                <T size={13} w="semibold" color={colors.accent} onPress={() => router.push('/privacy')}>Privacy Policy</T> and{' '}
+                <T size={13} w="semibold" color={colors.accent} onPress={() => router.push('/guidelines')}>Community Guidelines</T>.
+                No tolerance for objectionable content or abusive users.
+              </T>
+            </Pressable>
+          ) : null}
           <Button title={up ? 'Create account' : 'Log in'} onPress={submit} busy={busy} />
           {!up ? (
             <Pressable onPress={forgot} accessibilityRole="button" style={{ alignItems: 'center', paddingVertical: 6 }}>

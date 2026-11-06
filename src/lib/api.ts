@@ -1,5 +1,5 @@
 import type { Category } from './theme';
-import type { Comment, Group, GroupPost, NewRecipe, Profile, Recipe } from './types';
+import type { Comment, Group, GroupPost, NewRecipe, Profile, Recipe, Report } from './types';
 
 export type ProfileStats = { recipes: number; groups: number; followers: number };
 
@@ -16,6 +16,7 @@ export interface Api {
   signIn(email: string, password: string): Promise<void>;
   signUp(email: string, password: string, username: string, displayName: string): Promise<{ needsConfirm: boolean }>;
   signOut(): Promise<void>;
+  usernameAvailable(username: string): Promise<boolean>;
   deleteAccount(): Promise<void>;
   resetPassword(email: string): Promise<void>;
   changePassword(password: string): Promise<void>;
@@ -35,12 +36,19 @@ export interface Api {
   // People
   isFollowing(userId: string): Promise<boolean>;
   setFollowing(userId: string, on: boolean): Promise<void>;
-  report(recipeId: string, reportedUserId: string, reason: string): Promise<void>;
+  report(input: { recipeId?: string; commentId?: string; reportedUserId: string; reason: string }): Promise<void>;
   block(userId: string): Promise<void>;
 
   // Comments
   comments(recipeId: string): Promise<Comment[]>;
   addComment(recipeId: string, body: string): Promise<void>;
+
+  // Moderation (admins only)
+  reports(): Promise<Report[]>;
+  resolveReport(id: string): Promise<void>;
+  setRecipeHidden(id: string, hidden: boolean): Promise<void>;
+  deleteComment(id: string): Promise<void>;
+  banUser(userId: string): Promise<void>;
 
   // Groups
   groups(): Promise<Group[]>;

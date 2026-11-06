@@ -6,6 +6,8 @@ import { Icon } from '../../components/Icon';
 import { Screen } from '../../components/Screen';
 import { Avatar, Button, Glass, Input, Label, Photo, Row, T } from '../../components/ui';
 import { confirm, notify } from '../../lib/dialog';
+import { hasBlockedWord, KIND_MESSAGE } from '../../lib/filter';
+import { shrinkPhoto } from '../../lib/photos';
 import { useApp, useData } from '../../lib/store';
 import { colors } from '../../lib/theme';
 
@@ -29,6 +31,7 @@ export default function Profile() {
   }, [me]);
 
   async function save() {
+    if (hasBlockedWord(name, bio, tiktok)) return notify('Let’s keep it kind', KIND_MESSAGE);
     try {
       await api.updateProfile({ display_name: name.trim(), bio: bio.trim() || null, tiktok_handle: tiktok.replace(/^@/, '').trim() || null });
       await refreshMe();
@@ -41,7 +44,8 @@ export default function Profile() {
     const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.7 });
     if (res.canceled) return;
     try {
-      await api.updateProfile({ avatar_url: res.assets[0].uri });
+      const a = res.assets[0];
+      await api.updateProfile({ avatar_url: await shrinkPhoto(a.uri, a.width, a.height, 512) });
       await refreshMe();
     } catch (e) {
       notify('Couldn’t update photo', (e as Error).message);
@@ -168,6 +172,8 @@ export default function Profile() {
       ) : null}
       <Glass radius={22}>
         {!pwOpen ? <Row onPress={() => setPwOpen(true)}><T w="semibold" size={15}>Change password</T></Row> : null}
+        {me?.is_admin ? <Row onPress={() => router.push('/admin')}><T w="semibold" size={15} color={colors.accent}>Moderation</T></Row> : null}
+        <Row onPress={() => router.push('/support')}><T w="semibold" size={15}>Help & Support</T></Row>
         <Row onPress={() => router.push('/legal')}><T w="semibold" size={15}>Terms & Privacy</T></Row>
         <Row onPress={signOut}><T w="semibold" size={15}>Log out</T></Row>
         {api.mode === 'demo' ? <Row onPress={resetTestData}><T w="semibold" size={15} color={colors.ink2}>Reset test data</T></Row> : null}

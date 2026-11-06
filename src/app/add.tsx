@@ -6,6 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
 import { Backdrop, Button, Floating, Glass, Label, T } from '../components/ui';
 import { notify } from '../lib/dialog';
+import { hasBlockedWord, KIND_MESSAGE } from '../lib/filter';
+import { shrinkPhoto } from '../lib/photos';
 import { useApp } from '../lib/store';
 import { CATEGORIES, categoryStyle, colors, font, shadow, type Category } from '../lib/theme';
 import type { Ingredient } from '../lib/types';
@@ -28,13 +30,17 @@ export default function AddRecipe() {
 
   async function addPhotos() {
     const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: 8, quality: 0.75 });
-    if (!res.canceled) setPhotos([...photos, ...res.assets.map((a) => a.uri)].slice(0, 8));
+    if (res.canceled) return;
+    const small = await Promise.all(res.assets.map((a) => shrinkPhoto(a.uri, a.width, a.height)));
+    setPhotos([...photos, ...small].slice(0, 8));
   }
   async function takePhoto() {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) return notify('Camera access needed', 'Turn on camera access in Settings to take recipe photos.');
     const res = await ImagePicker.launchCameraAsync({ quality: 0.75 });
-    if (!res.canceled) setPhotos([...photos, res.assets[0].uri].slice(0, 8));
+    if (res.canceled) return;
+    const a = res.assets[0];
+    setPhotos([...photos, await shrinkPhoto(a.uri, a.width, a.height)].slice(0, 8));
   }
 
   const setIng = (i: number, patch: Partial<Ingredient>) => setIngredients(ingredients.map((x, j) => (j === i ? { ...x, ...patch } : x)));
@@ -53,6 +59,9 @@ export default function AddRecipe() {
     if (!clean.title) return notify('Add a name', 'Give your recipe a name first.');
     if (!clean.ingredients.length) return notify('Add ingredients', 'Add at least one ingredient.');
     if (!clean.steps.length) return notify('Add steps', 'Add at least one step.');
+    if (hasBlockedWord(clean.title, clean.total_time, clean.servings, JSON.stringify(clean.ingredients), clean.steps.join(' '))) {
+      return notify('Let’s keep it kind', KIND_MESSAGE);
+    }
     setBusy(true);
     try {
       const id = await api.createRecipe(clean);

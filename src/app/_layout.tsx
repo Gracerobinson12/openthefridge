@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SheetProvider } from '../components/ActionSheet';
 import { AppProvider, useApp } from '../lib/store';
 import { colors } from '../lib/theme';
 
@@ -16,7 +17,7 @@ function AuthGate() {
   const segments = useSegments();
   useEffect(() => {
     if (!ready) return;
-    const open = ['welcome', 'sign-in', 'legal'].includes(segments[0] as string);
+    const open = ['welcome', 'sign-in', 'legal', 'terms', 'privacy', 'guidelines', 'support'].includes(segments[0] as string);
     if (!me && !open) router.replace('/welcome');
     if (me && (segments[0] === 'welcome' || segments[0] === 'sign-in')) router.replace('/');
   }, [ready, me, segments]);
@@ -40,6 +41,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AppProvider>
+        <SheetProvider>
         <StatusBar style="dark" />
         <AuthGate />
         <Splash />
@@ -50,6 +52,7 @@ export default function RootLayout() {
           <Stack.Screen name="welcome" options={{ animation: 'fade' }} />
           <Stack.Screen name="sign-in" />
         </Stack>
+        </SheetProvider>
       </AppProvider>
     </SafeAreaProvider>
   );

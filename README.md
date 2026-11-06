@@ -6,6 +6,8 @@ One codebase → an installable web app (PWA) **and**, later, iPhone + Android a
 
 Built with Expo (React Native) + Expo Router, with Supabase for accounts, the database and photo storage.
 
+See **LAUNCH.md** for the step-by-step plan to go live by Thanksgiving.
+
 ---
 
 ## What's inside

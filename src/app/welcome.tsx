@@ -81,9 +81,13 @@ export default function Welcome() {
 
           <Button title="Create an account" onPress={() => router.push({ pathname: '/sign-in', params: { mode: 'up' } })} />
           <Button title="Log in" variant="soft" onPress={() => router.push({ pathname: '/sign-in', params: { mode: 'in' } })} />
-          <Pressable onPress={() => router.push('/legal')} accessibilityRole="link" style={{ alignItems: 'center', paddingTop: 6 }}>
-            <T size={12} color={colors.ink3} style={{ textAlign: 'center' }}>By continuing you agree to the Terms and Privacy Policy</T>
-          </Pressable>
+          <View style={{ flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 14, paddingTop: 6 }}>
+            {([['Terms', '/terms'], ['Privacy', '/privacy'], ['Guidelines', '/guidelines'], ['Help', '/support']] as const).map(([label, href]) => (
+              <Pressable key={label} onPress={() => router.push(href)} accessibilityRole="link" hitSlop={6}>
+                <T w="semibold" size={12} color={colors.ink3}>{label}</T>
+              </Pressable>
+            ))}
+          </View>
         </View>
       </ScrollView>
     </View>

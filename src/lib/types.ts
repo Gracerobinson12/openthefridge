@@ -7,6 +7,8 @@ export type Profile = {
   avatar_url: string | null;
   bio: string | null;
   tiktok_handle: string | null;
+  is_admin?: boolean;
+  banned?: boolean;
 };
 
 export type Ingredient = { qty: string; name: string };
@@ -62,4 +64,14 @@ export type GroupPost = {
   note: string | null;
   shared_by: Profile;
   created_at: string;
+};
+
+export type Report = {
+  id: string;
+  reason: string;
+  created_at: string;
+  reporter: Profile | null;
+  reported_user: Profile | null;
+  recipe: { id: string; title: string; is_hidden: boolean } | null;
+  comment: { id: string; body: string } | null;
 };

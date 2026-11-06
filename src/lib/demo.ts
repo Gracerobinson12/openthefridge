@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Api } from './api';
 import type { Category } from './theme';
-import type { Comment, Group, Profile, Recipe } from './types';
+import type { Comment, Group, Profile, Recipe, Report } from './types';
 
 /**
  * Demo backend: runs entirely on the device with sample data, so the app works
@@ -23,9 +23,11 @@ type DB = {
   me: Profile;
   accounts: { email: string; password: string; username: string; display_name: string }[];
   session: string | null;
+  reports: { id: string; recipe_id?: string; comment_id?: string; reported_user_id: string; reason: string; created_at: string }[];
+  hidden: string[];
 };
 
-const KEY = 'openthefridge-demo-v2';
+const KEY = 'openthefridge-demo-v3';
 
 const people: Record<string, Profile> = {
   maya: { id: 'maya', username: 'maya.bakes', display_name: 'Maya R.', avatar_url: null, bio: null, tiktok_handle: null },
@@ -50,6 +52,8 @@ function seed(): DB {
     me: { id: 'me', username: 'you', display_name: 'You', avatar_url: null, bio: null, tiktok_handle: null },
     accounts: [],
     session: null,
+    reports: [],
+    hidden: [],
     recipes: [
       r('r1', 'maya', 'Brown Butter Cookies', 'Desserts', '30 min', '24', 128, 2,
         [['1 cup', 'Butter, browned'], ['1 cup', 'Brown sugar'], ['2', 'Eggs'], ['2¼ cups', 'Flour'], ['1 tsp', 'Baking soda'], ['2 cups', 'Chocolate chips']],
@@ -69,6 +73,9 @@ function seed(): DB {
       r('r6', 'sam', 'Strawberry Tres Leches', 'Desserts', '1 hr', '12', 403, 50,
         [['1', 'Vanilla sponge cake'], ['1 can', 'Condensed milk'], ['1 can', 'Evaporated milk'], ['½ cup', 'Cream'], ['2 cups', 'Strawberries']],
         ['Poke the cake all over.', 'Pour over the three milks; chill 2 hours.', 'Top with whipped cream and berries.']),
+      r('r7', 'sam', 'Maple Pecan Pumpkin Pie', 'Holiday', '1 hr 30 min', '8', 512, 3,
+        [['1', 'Pie crust'], ['15 oz', 'Pumpkin purée'], ['¾ cup', 'Maple syrup'], ['2', 'Eggs'], ['1 cup', 'Heavy cream'], ['2 tsp', 'Pumpkin spice'], ['½ cup', 'Pecans']],
+        ['Heat oven to 400°F.', 'Whisk pumpkin, maple, eggs, cream and spice.', 'Pour into the crust, top with pecans.', 'Bake 15 min, then 350°F for 40 min until just set.', 'Cool 2 hours before slicing.']),
       r('mine1', 'me', "Grandma's Lemon Bars", 'Desserts', '45 min', '16', 12, 70,
         [['1 cup', 'Butter, softened'], ['2 cups', 'All-purpose flour'], ['½ cup', 'Powdered sugar'], ['4', 'Large eggs'], ['1½ cups', 'Sugar'], ['⅓ cup', 'Fresh lemon juice'], ['2', 'Lemons, zested']],
         ['Heat oven to 350°F and line a 9×13 pan with parchment.', 'Mix butter, flour and powdered sugar. Press into the pan and bake 20 min.', 'Whisk eggs, sugar, lemon juice and zest until smooth.', 'Pour over the warm crust and bake 20–25 min, until set.', 'Cool completely, dust with powdered sugar and cut into bars.']),
@@ -143,7 +150,7 @@ export function createDemoApi(): Api {
       const d = await load();
       const acct = d.accounts.find((a) => a.email === email.toLowerCase());
       if (!acct || acct.password !== password) throw new Error('Wrong email or password.');
-      d.me = { ...d.me, username: acct.username, display_name: acct.display_name };
+      d.me = { ...d.me, username: acct.username, display_name: acct.display_name, is_admin: true };
       d.session = acct.email;
       await save();
       listeners.forEach((l) => l());
@@ -156,11 +163,16 @@ export function createDemoApi(): Api {
         throw new Error('That username is taken. Try another.');
       }
       d.accounts.push({ email: e, password, username, display_name: displayName });
-      d.me = { ...d.me, username, display_name: displayName };
+      d.me = { ...d.me, username, display_name: displayName, is_admin: true };
       d.session = e;
       await save();
       listeners.forEach((l) => l());
       return { needsConfirm: false };
+    },
+    async usernameAvailable(username) {
+      const d = await load();
+      const u = username.toLowerCase();
+      return !d.accounts.some((a) => a.username === u) && !Object.values(people).some((p) => p.username === u);
     },
     async signOut() {
       const d = await load();
@@ -199,7 +211,7 @@ export function createDemoApi(): Api {
     async feed(category) {
       const d = await load();
       return d.recipes
-        .filter((r) => r.author_id !== 'me' && !d.blocks.includes(r.author_id))
+        .filter((r) => r.author_id !== 'me' && !d.blocks.includes(r.author_id) && !d.hidden.includes(r.id))
         .filter((r) => category === 'All' || r.category === category)
         .sort(newest)
         .map((r) => toRecipe(d, r));
@@ -255,7 +267,43 @@ export function createDemoApi(): Api {
       toggle(d.follows, userId, on);
       await save();
     },
-    async report() {},
+    async report({ recipeId, commentId, reportedUserId, reason }) {
+      const d = await load();
+      d.reports.push({ id: 'rep' + Date.now(), recipe_id: recipeId, comment_id: commentId, reported_user_id: reportedUserId, reason, created_at: new Date().toISOString() });
+      await save();
+    },
+    async reports(): Promise<Report[]> {
+      const d = await load();
+      return d.reports.map((r) => {
+        const rec = r.recipe_id ? d.recipes.find((x) => x.id === r.recipe_id) : undefined;
+        const com = r.comment_id ? d.comments.find((x) => x.id === r.comment_id) : undefined;
+        return {
+          id: r.id, reason: r.reason, created_at: r.created_at, reporter: d.me, reported_user: person(d, r.reported_user_id),
+          recipe: rec ? { id: rec.id, title: rec.title, is_hidden: d.hidden.includes(rec.id) } : null,
+          comment: com ? { id: com.id, body: com.body } : null,
+        };
+      });
+    },
+    async resolveReport(id) {
+      const d = await load();
+      d.reports = d.reports.filter((r) => r.id !== id);
+      await save();
+    },
+    async setRecipeHidden(id, hidden) {
+      const d = await load();
+      toggle(d.hidden, id, hidden);
+      await save();
+    },
+    async deleteComment(id) {
+      const d = await load();
+      d.comments = d.comments.filter((c) => c.id !== id);
+      await save();
+    },
+    async banUser(userId) {
+      const d = await load();
+      toggle(d.blocks, userId, true);
+      await save();
+    },
     async block(userId) {
       const d = await load();
       toggle(d.blocks, userId, true);
@@ -266,7 +314,7 @@ export function createDemoApi(): Api {
     async comments(recipeId) {
       const d = await load();
       return d.comments
-        .filter((c) => c.recipe_id === recipeId)
+        .filter((c) => c.recipe_id === recipeId && !d.blocks.includes(c.author_id))
         .map((c) => ({ id: c.id, recipe_id: c.recipe_id, body: c.body, created_at: c.created_at, author: person(d, c.author_id) })) as Comment[];
     },
     async addComment(recipeId, body) {

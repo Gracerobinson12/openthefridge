@@ -16,18 +16,3 @@ export function confirm(title: string, message: string, okLabel = 'OK'): Promise
     ]),
   );
 }
-
-/** Pick one of several actions (used for the recipe "…" menu). */
-export function choose(title: string, options: string[]): Promise<number> {
-  if (Platform.OS === 'web') {
-    const answer = window.prompt(`${title}\n\n${options.map((o, i) => `${i + 1}. ${o}`).join('\n')}\n\nType a number:`);
-    const n = Number(answer) - 1;
-    return Promise.resolve(Number.isInteger(n) && n >= 0 && n < options.length ? n : -1);
-  }
-  return new Promise((resolve) =>
-    Alert.alert(title, undefined, [
-      ...options.map((o, i) => ({ text: o, onPress: () => resolve(i) })),
-      { text: 'Cancel', style: 'cancel' as const, onPress: () => resolve(-1) },
-    ]),
-  );
-}

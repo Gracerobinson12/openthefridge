@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Api } from './api';
 import type { Category } from './theme';
-import type { Comment, Group, GroupPost, Profile, Recipe } from './types';
+import type { Comment, Group, GroupPost, Profile, Recipe, Report } from './types';
 
 const RECIPE_SELECT =
   '*, author:profiles!recipes_author_id_fkey(*), likes(count), comments(count)';
@@ -92,13 +92,21 @@ export function createLiveApi(sb: SupabaseClient): Api {
       const { data, error } = await sb.auth.signUp({
         email,
         password,
-        options: { data: { username: username.toLowerCase(), display_name: displayName } },
+        options: {
+          data: { username: username.toLowerCase(), display_name: displayName, terms_accepted_at: new Date().toISOString() },
+          emailRedirectTo: typeof window !== 'undefined' && window.location ? window.location.origin : undefined,
+        },
       });
       if (error) throw new Error(error.message);
       return { needsConfirm: !data.session };
     },
     async signOut() {
       await sb.auth.signOut();
+    },
+    async usernameAvailable(username) {
+      const res = await sb.rpc('username_available', { name: username.toLowerCase() });
+      if (res.error) throw new Error(res.error.message);
+      return res.data as boolean;
     },
     async resetPassword(email) {
       const redirectTo = typeof window !== 'undefined' && window.location ? `${window.location.origin}/profile?reset=1` : undefined;
@@ -132,7 +140,7 @@ export function createLiveApi(sb: SupabaseClient): Api {
     async feed(category) {
       const me = await uid();
       const blocked = await blockedIds(me);
-      let q = sb.from('recipes').select(RECIPE_SELECT).eq('is_public', true).neq('author_id', me);
+      let q = sb.from('recipes').select(RECIPE_SELECT).eq('is_public', true).eq('is_hidden', false).neq('author_id', me);
       if (category !== 'All') q = q.eq('category', category);
       if (blocked.length) q = q.not('author_id', 'in', `(${blocked.join(',')})`);
       const rows = check(await q.order('created_at', { ascending: false }).limit(60));
@@ -194,9 +202,33 @@ export function createLiveApi(sb: SupabaseClient): Api {
       if (on) check(await sb.from('follows').upsert({ follower_id: me, following_id: userId }));
       else check(await sb.from('follows').delete().match({ follower_id: me, following_id: userId }));
     },
-    async report(recipeId, reportedUserId, reason) {
+    async report({ recipeId, commentId, reportedUserId, reason }) {
       const me = await uid();
-      check(await sb.from('reports').insert({ reporter_id: me, recipe_id: recipeId, reported_user_id: reportedUserId, reason }));
+      check(await sb.from('reports').insert({
+        reporter_id: me, recipe_id: recipeId ?? null, comment_id: commentId ?? null, reported_user_id: reportedUserId, reason,
+      }));
+    },
+    async reports() {
+      const rows = check(
+        await sb
+          .from('reports')
+          .select('id, reason, created_at, reporter:profiles!reports_reporter_id_fkey(*), reported_user:profiles!reports_reported_user_id_fkey(*), recipe:recipes(id, title, is_hidden), comment:comments(id, body)')
+          .eq('status', 'open')
+          .order('created_at', { ascending: false }),
+      );
+      return (rows ?? []) as unknown as Report[];
+    },
+    async resolveReport(id) {
+      check(await sb.from('reports').update({ status: 'resolved' }).eq('id', id));
+    },
+    async setRecipeHidden(id, hidden) {
+      check(await sb.from('recipes').update({ is_hidden: hidden }).eq('id', id));
+    },
+    async deleteComment(id) {
+      check(await sb.from('comments').delete().eq('id', id));
+    },
+    async banUser(userId) {
+      check(await sb.from('profiles').update({ banned: true }).eq('id', userId));
     },
     async block(userId) {
       const me = await uid();
@@ -205,6 +237,8 @@ export function createLiveApi(sb: SupabaseClient): Api {
     },
 
     async comments(recipeId) {
+      const me = await uid();
+      const blocked = new Set(await blockedIds(me));
       const rows = check(
         await sb
           .from('comments')
@@ -212,7 +246,7 @@ export function createLiveApi(sb: SupabaseClient): Api {
           .eq('recipe_id', recipeId)
           .order('created_at', { ascending: true }),
       );
-      return (rows ?? []) as Comment[];
+      return ((rows ?? []) as Comment[]).filter((c) => !blocked.has(c.author.id));
     },
     async addComment(recipeId, body) {
       const me = await uid();
