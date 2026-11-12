@@ -6,11 +6,11 @@
 export const LEGAL = {
   appName: 'Open the Fridge',
   /** Your full legal name, or your business name if you set one up (e.g. "Gratia Core LLC"). */
-  owner: '[YOUR NAME OR BUSINESS NAME]',
+  owner: 'Gratia Core Enterprise LLC',
   /** An inbox you check. Apple requires published contact info for apps where people post. */
-  contactEmail: '[CONTACT EMAIL]',
+  contactEmail: 'intel@gratiacore.com',
   /** The US state whose laws apply (where you live or where your business is registered). */
-  state: '[YOUR STATE]',
+  state: 'Georgia',
   website: 'https://openthefridge.gratiacore.com',
   effectiveDate: 'November 20, 2026',
   minAge: 13,

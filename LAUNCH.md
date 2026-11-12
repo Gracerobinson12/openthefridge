@@ -12,7 +12,7 @@ Total cost to launch the PWA: **$0** (you already own gratiacore.com).
 ### 1. Fill in your details (5 min)
 Open `src/lib/legal.ts` and replace the 3 placeholders:
 - `owner` → your full legal name (or business name if you register one)
-- `contactEmail` → an inbox you'll check, e.g. `hello@gratiacore.com` (Apple requires published contact info)
+- `contactEmail` → an inbox you'll check, e.g. `intel@gratiacore.com` (Apple requires published contact info)
 - `state` → your US state
 
 ### 2. Supabase: database + accounts (15 min, free)
@@ -30,7 +30,7 @@ Supabase's built-in email sender only sends a couple of emails an hour, so on la
 2. **API Keys → Create** → copy it.
 3. Supabase → **Authentication → Emails → SMTP Settings** → enable custom SMTP:
    - Host `smtp.resend.com` · Port `465` · Username `resend` · Password = the API key
-   - Sender email `hello@gratiacore.com` · Sender name `Open the Fridge`
+   - Sender email `intel@gratiacore.com` · Sender name `Open the Fridge`
 4. Supabase → **Authentication → Rate Limits** → raise "emails per hour" to ~100.
 5. Supabase → **Authentication → Emails → Templates** → change "Confirm signup" subject to *Open the Fridge: confirm your email*.
 
