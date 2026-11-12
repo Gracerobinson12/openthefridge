@@ -31,6 +31,28 @@ export type Recipe = {
   saved: boolean;
   /** Slide order for TikTok photo posts, as slide ids. */
   slide_order: string[] | null;
+  is_public?: boolean;
+} & Partial<VideoSource>;
+
+/** Where an imported recipe came from, so we can credit and link back to the creator. */
+export type VideoSource = {
+  source_url: string;
+  source_platform: 'youtube' | 'tiktok';
+  source_author: string;
+  source_thumbnail: string | null;
+};
+
+/** What the importer hands back: a draft the person reviews before saving. */
+export type ImportedRecipe = {
+  title: string;
+  category: Category;
+  total_time: string;
+  servings: string;
+  ingredients: Ingredient[];
+  steps: string[];
+  /** True when the video caption/description didn't include everything (e.g. TikTok with a short caption). */
+  partial: boolean;
+  source: VideoSource;
 };
 
 export type NewRecipe = {
@@ -41,7 +63,8 @@ export type NewRecipe = {
   ingredients: Ingredient[];
   steps: string[];
   photos: string[];
-};
+  is_public?: boolean;
+} & Partial<VideoSource>;
 
 export type Group = {
   id: string;

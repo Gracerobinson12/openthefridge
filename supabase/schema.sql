@@ -94,6 +94,11 @@ create table public.recipes (
   slide_order text[],
   is_public boolean not null default true,
   is_hidden boolean not null default false, -- set automatically after several reports, or by an admin
+  -- Imported from a video: credit + link back to the original creator
+  source_url text check (source_url ~ '^https://'),
+  source_platform text check (source_platform in ('youtube', 'tiktok')),
+  source_author text check (char_length(source_author) <= 100),
+  source_thumbnail text check (source_thumbnail ~ '^https://'),
   created_at timestamptz not null default now()
 );
 create index recipes_created_idx on public.recipes (created_at desc);
@@ -315,6 +320,25 @@ create policy "upload into own folder" on storage.objects for insert to authenti
   with check (bucket_id = 'recipe-photos' and (storage.foldername(name))[1] = auth.uid()::text and public.can_post());
 create policy "delete own photos" on storage.objects for delete to authenticated
   using (bucket_id = 'recipe-photos' and ((storage.foldername(name))[1] = auth.uid()::text or public.is_admin()));
+
+-- ───────────── Video imports (TikTok / YouTube → recipe) ─────────────
+-- Written only by the import-recipe Edge Function (no policies = not reachable from the app directly).
+create table public.import_log (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  url text not null,
+  created_at timestamptz not null default now()
+);
+create index import_log_user_idx on public.import_log (user_id, created_at desc);
+alter table public.import_log enable row level security;
+
+-- Same video imported twice? Reuse the first result instead of calling the AI again.
+create table public.import_cache (
+  url text primary key,
+  result jsonb not null,
+  created_at timestamptz not null default now()
+);
+alter table public.import_cache enable row level security;
 
 -- ───────────── Account deletion (required by the App Store) ─────────────
 create function public.delete_my_account() returns void

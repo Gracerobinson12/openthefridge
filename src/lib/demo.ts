@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Api } from './api';
 import type { Category } from './theme';
-import type { Comment, Group, Profile, Recipe, Report } from './types';
+import type { Comment, Group, ImportedRecipe, Profile, Recipe, Report } from './types';
+import { parseVideoLink } from './videoLink';
 
 /**
  * Demo backend: runs entirely on the device with sample data, so the app works
@@ -232,9 +233,38 @@ export function createDemoApi(): Api {
     async createRecipe(input) {
       const d = await load();
       const id = 'mine' + Date.now();
-      d.recipes.push({ ...input, id, author_id: 'me', created_at: new Date().toISOString(), base_likes: 0, slide_order: null });
+      d.recipes.push({ ...input, is_public: input.is_public ?? true, id, author_id: 'me', created_at: new Date().toISOString(), base_likes: 0, slide_order: null });
       await save();
       return id;
+    },
+    async importFromLink(url) {
+      // Test mode: no AI connected yet, so return a realistic sample after a short pause.
+      const link = parseVideoLink(url);
+      if (!link) throw new Error('Paste a TikTok or YouTube video link.');
+      await new Promise((r) => setTimeout(r, 1200));
+      const yt = link.platform === 'youtube';
+      const sample: ImportedRecipe = {
+        title: 'Creamy Tuscan Garlic Pasta',
+        category: 'Lunch',
+        total_time: '25 min',
+        servings: '4',
+        ingredients: [
+          { qty: '12 oz', name: 'Penne' }, { qty: '2 tbsp', name: 'Butter' }, { qty: '4 cloves', name: 'Garlic, minced' },
+          { qty: '½ cup', name: 'Sun-dried tomatoes, chopped' }, { qty: '1 cup', name: 'Heavy cream' },
+          { qty: '¾ cup', name: 'Parmesan, grated' }, { qty: '2 cups', name: 'Baby spinach' }, { qty: '', name: 'Salt and pepper' },
+        ],
+        steps: [
+          'Boil the pasta in salted water until al dente. Save ½ cup of pasta water, then drain.',
+          'Melt the butter in a large pan over medium heat and cook the garlic for 1 minute.',
+          'Add the sun-dried tomatoes and cook 2 minutes.',
+          'Pour in the cream, bring to a gentle simmer, then stir in the Parmesan until smooth.',
+          'Add the spinach and stir until wilted. Season with salt and pepper.',
+          'Toss in the pasta, adding splashes of pasta water until silky. Serve right away.',
+        ],
+        partial: !yt,
+        source: { source_url: link.url, source_platform: link.platform, source_author: yt ? 'Sample Kitchen' : '@samplecook', source_thumbnail: null },
+      };
+      return sample;
     },
     async deleteRecipe(id) {
       const d = await load();

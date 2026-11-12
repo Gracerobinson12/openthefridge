@@ -46,7 +46,7 @@ export function RecipePost({ recipe, note }: { recipe: Recipe; note?: string | n
       </Pressable>
       <Pressable onPress={open} style={{ paddingHorizontal: 6, paddingTop: 12, gap: 2 }}>
         <T w="heavy" size={18}>{recipe.title}</T>
-        <T size={13} color={colors.ink2}>{[recipe.total_time, recipe.servings && `Serves ${recipe.servings}`].filter(Boolean).join(' · ')}</T>
+        <T size={13} color={colors.ink2}>{[recipe.total_time, recipe.servings && `Serves ${recipe.servings}`, recipe.source_author && `via ${recipe.source_author}`].filter(Boolean).join(' · ')}</T>
       </Pressable>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingTop: 6 }}>
         <Pressable accessibilityRole="button" accessibilityLabel="Like" accessibilityState={{ selected: liked }}

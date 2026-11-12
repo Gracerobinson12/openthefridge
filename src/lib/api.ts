@@ -1,5 +1,5 @@
 import type { Category } from './theme';
-import type { Comment, Group, GroupPost, NewRecipe, Profile, Recipe, Report } from './types';
+import type { Comment, Group, GroupPost, ImportedRecipe, NewRecipe, Profile, Recipe, Report } from './types';
 
 export type ProfileStats = { recipes: number; groups: number; followers: number };
 
@@ -28,6 +28,8 @@ export interface Api {
   tin(category: Category | 'All'): Promise<Recipe[]>;
   recipe(id: string): Promise<Recipe | null>;
   createRecipe(input: NewRecipe): Promise<string>;
+  /** Turns a TikTok or YouTube link into a draft recipe (not saved yet). */
+  importFromLink(url: string): Promise<ImportedRecipe>;
   deleteRecipe(id: string): Promise<void>;
   setSlideOrder(id: string, order: string[]): Promise<void>;
   setLiked(id: string, on: boolean): Promise<void>;

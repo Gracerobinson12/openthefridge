@@ -22,6 +22,18 @@ export default function Tin() {
         <T w="heavy" size={34} accessibilityRole="header">My Recipe Tin</T>
         <T size={15} color={colors.ink2}>Your recipes and saves{cat !== 'All' ? ` · ${cat}` : ''}</T>
       </View>
+      <Pressable onPress={() => router.push({ pathname: '/add', params: { import: '1' } })} accessibilityRole="button">
+        <Glass radius={20} strong style={{ padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="link" size={17} color={colors.white} strokeWidth={2.2} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <T w="bold" size={14}>Save a recipe from a video</T>
+            <T size={12} color={colors.ink2}>Paste a TikTok or YouTube link</T>
+          </View>
+          <Icon name="chevron" size={16} color={colors.ink3} strokeWidth={2.2} />
+        </Glass>
+      </Pressable>
 
       {top ? (
         <View style={{ height: 178, marginTop: 6 }}>

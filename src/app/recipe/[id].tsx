@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
+import { Image, Linking, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
+import { platformName } from '../../components/ImportCard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../../components/Icon';
 import { timeAgo } from '../../components/RecipePost';
@@ -10,7 +11,7 @@ import { confirm, notify } from '../../lib/dialog';
 import { hasBlockedWord, KIND_MESSAGE } from '../../lib/filter';
 import type { Comment } from '../../lib/types';
 import { useApp, useData } from '../../lib/store';
-import { colors, shadow } from '../../lib/theme';
+import { categoryStyle, colors, shadow } from '../../lib/theme';
 
 export default function RecipeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -127,7 +128,7 @@ export default function RecipeScreen() {
 
         <View style={{ marginTop: -44, borderTopLeftRadius: 34, borderTopRightRadius: 34, backgroundColor: 'rgba(250,248,253,0.97)', borderTopWidth: 1, borderColor: colors.white, padding: 20, paddingTop: 22, gap: 14, boxShadow: '0px -10px 30px rgba(40,25,70,0.08)' }}>
           <View style={{ flexDirection: 'row', gap: 6 }}>
-            <View style={{ height: 24, paddingHorizontal: 10, borderRadius: 12, backgroundColor: '#FFC7D6', justifyContent: 'center' }}>
+            <View style={{ height: 24, paddingHorizontal: 10, borderRadius: 12, backgroundColor: categoryStyle[recipe.category]?.pastel ?? '#FFC7D6', justifyContent: 'center' }}>
               <T w="bold" size={12}>{recipe.category}</T>
             </View>
           </View>
@@ -142,6 +143,21 @@ export default function RecipeScreen() {
                 onPress={() => { setFollowing(!following); api.setFollowing(recipe.author_id, !following).catch(() => setFollowing(following)); }} />
             ) : null}
           </View>
+
+          {recipe.source_url ? (
+            <Pressable onPress={() => Linking.openURL(recipe.source_url!)} accessibilityRole="link" accessibilityLabel={`Watch the original video by ${recipe.source_author}`}>
+              <Glass radius={18} strong style={{ padding: 10, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: colors.ink, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+                  {recipe.source_thumbnail ? <Image source={{ uri: recipe.source_thumbnail }} style={{ width: 48, height: 48 }} /> : <Icon name="music" size={20} color={colors.white} strokeWidth={2} />}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <T w="bold" size={14} numberOfLines={1}>Recipe by {recipe.source_author}</T>
+                  <T size={12} color={colors.ink2}>Watch the original on {platformName(recipe.source_platform)}</T>
+                </View>
+                <Icon name="chevron" size={16} color={colors.ink3} strokeWidth={2.2} />
+              </Glass>
+            </Pressable>
+          ) : null}
 
           <Glass radius={18} strong style={{ flexDirection: 'row', paddingVertical: 10 }}>
             {[[recipe.total_time || '–', 'TOTAL'], [recipe.servings || '–', 'SERVES'], [String(recipe.ingredients.length), 'INGREDIENTS']].map(([v, l], i) => (

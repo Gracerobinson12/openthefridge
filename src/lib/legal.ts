@@ -41,6 +41,9 @@ export const TERMS: LegalDoc = {
       'You own the recipes, photos and comments you post ("your content"). Only post things you have the right to share. Recipe ingredient lists are fine to share, but don\'t copy other people\'s photos, videos or written instructions word for word without permission.',
       `So we can run the app, you give us a worldwide, non-exclusive, royalty-free license to store, display, copy and share your content inside the app, to the people you choose (everyone on the Fridge, or only your groups). For recipes you post publicly, you also let us show them in posts that promote ${L.appName} (for example, a screenshot of the Fridge), and we'll credit your username. This license ends when you delete the content or your account, except where it's already been shared by others or we need to keep it for legal reasons.`,
     ] },
+    { h: '4a. Recipes imported from videos', p: [
+      'When you import a recipe from a TikTok or YouTube link, the app uses AI to write out the ingredients and steps, and always credits and links to the original creator. Imported recipes stay private in your Tin unless you choose to share them. Don\'t present someone else\'s recipe as your own, and check AI-written recipes before cooking: they can contain mistakes.',
+    ] },
     { h: '5. Copyright complaints', p: [
       `If you believe something in the app infringes your copyright, email ${L.contactEmail} with: what the work is, where it appears in the app, your contact details, and a statement that you believe in good faith the use isn't authorized. We'll remove infringing content and close the accounts of repeat infringers.`,
     ] },
@@ -96,6 +99,7 @@ export const PRIVACY: LegalDoc = {
     ] },
     { h: 'Service providers', p: [
       'We use a few companies to run the app, and they process data only on our behalf: Supabase (database, sign-in and photo storage) and Vercel (website hosting). Their servers are in the United States.',
+      'If you import a recipe from a video, the video link (and, for TikTok, the video\'s public caption) is sent to Google\'s Gemini API so it can write out the recipe. We don\'t send your name or email with it.',
       'If you choose to post to TikTok, the content you post is sent to TikTok and handled under TikTok\'s privacy policy.',
       'We may disclose information if the law requires it, or to protect the safety of people using the app.',
     ] },

@@ -44,6 +44,20 @@ Supabase's built-in email sender only sends a couple of emails an hour, so on la
 Free Supabase projects pause after a week without activity. The included GitHub Action pings it daily:
 GitHub repo → **Settings → Secrets and variables → Actions** → add `SUPABASE_URL` and `SUPABASE_KEY` → **Actions** tab → *Keep Supabase awake* → **Run workflow** once to test.
 
+### 5b. Turn on video imports (10 min, free)
+Lets people paste a TikTok or YouTube link and get the recipe written out step by step.
+1. Get a free Gemini API key: **aistudio.google.com/apikey** → Create API key → copy it.
+2. Supabase → **Edge Functions → Secrets** → add `GEMINI_API_KEY` = your key.
+3. Supabase → **Edge Functions → Deploy a new function → Via Editor** → name it exactly `import-recipe` → paste all of `supabase/functions/import-recipe/index.ts` → **Deploy**.
+   (Or with the Supabase CLI: `npx supabase functions deploy import-recipe`.)
+4. Try it: in the app, **My Tin → Save a recipe from a video** → paste a YouTube cooking video link.
+
+How it works and its limits:
+- **YouTube:** Gemini watches the public video (picture + sound) and writes the steps. Best results.
+- **TikTok:** TikTok only shares the caption, not the video, so it works when the creator wrote the recipe in the caption. Otherwise the app says so and the person fills it in.
+- Free Gemini tier: up to 8 hours of YouTube video per day across everyone. Each person can import 15 recipes a day (change with an `IMPORTS_PER_DAY` secret). The same video is only processed once, then reused for everyone.
+- Imported recipes stay private in the person's Tin unless they switch on "Share on the Fridge", and always credit and link to the creator.
+
 ### 6. Make yourself the moderator (2 min)
 Sign up in the live app, then in Supabase **SQL Editor** run:
 ```sql

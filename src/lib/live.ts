@@ -1,7 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Api } from './api';
 import type { Category } from './theme';
-import type { Comment, Group, GroupPost, Profile, Recipe, Report } from './types';
+import type { Comment, Group, GroupPost, ImportedRecipe, Profile, Recipe, Report } from './types';
+import { parseVideoLink } from './videoLink';
 
 const RECIPE_SELECT =
   '*, author:profiles!recipes_author_id_fkey(*), likes(count), comments(count)';
@@ -54,6 +55,11 @@ export function createLiveApi(sb: SupabaseClient): Api {
       photos: r.photos ?? [],
       created_at: r.created_at,
       slide_order: r.slide_order,
+      is_public: r.is_public,
+      source_url: r.source_url ?? undefined,
+      source_platform: r.source_platform ?? undefined,
+      source_author: r.source_author ?? undefined,
+      source_thumbnail: r.source_thumbnail ?? null,
       like_count: r.likes?.[0]?.count ?? 0,
       comment_count: r.comments?.[0]?.count ?? 0,
       liked: liked.has(r.id),
@@ -174,6 +180,21 @@ export function createLiveApi(sb: SupabaseClient): Api {
           .single(),
       );
       return (row as { id: string }).id;
+    },
+    async importFromLink(url) {
+      const link = parseVideoLink(url);
+      if (!link) throw new Error('Paste a TikTok or YouTube video link.');
+      const { data, error } = await sb.functions.invoke('import-recipe', { body: { url: link.url } });
+      if (error) {
+        // The function sends a friendly message in its JSON body; show that instead of a generic error.
+        let msg = error.message;
+        try {
+          const body = await (error as { context?: Response }).context?.json();
+          if (body?.error) msg = body.error;
+        } catch { /* keep generic message */ }
+        throw new Error(msg);
+      }
+      return data as ImportedRecipe;
     },
     async deleteRecipe(id) {
       check(await sb.from('recipes').delete().eq('id', id));

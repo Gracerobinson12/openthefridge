@@ -1,16 +1,17 @@
 import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
-import { Backdrop, Button, Floating, Glass, Label, T } from '../components/ui';
+import { ImportCard, platformName } from '../components/ImportCard';
+import { Backdrop, Button, Floating, Glass, Label, Switch, T } from '../components/ui';
 import { notify } from '../lib/dialog';
 import { hasBlockedWord, KIND_MESSAGE } from '../lib/filter';
 import { shrinkPhoto } from '../lib/photos';
 import { useApp } from '../lib/store';
 import { CATEGORIES, categoryStyle, colors, font, shadow, type Category } from '../lib/theme';
-import type { Ingredient } from '../lib/types';
+import type { ImportedRecipe, Ingredient, VideoSource } from '../lib/types';
 
 const field = { fontFamily: font.medium, fontSize: 15, color: colors.ink, paddingVertical: 0 } as const;
 
@@ -25,6 +26,23 @@ export default function AddRecipe() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([{ qty: '', name: '' }, { qty: '', name: '' }]);
   const [steps, setSteps] = useState<string[]>(['']);
   const [busy, setBusy] = useState(false);
+  const params = useLocalSearchParams<{ import?: string }>();
+  const [source, setSource] = useState<VideoSource | null>(null);
+  const [partial, setPartial] = useState(false);
+  const [isPublic, setIsPublic] = useState(true);
+
+  // Fill the form from an imported video. Imported recipes stay private in your Tin by default.
+  function applyImport(r: ImportedRecipe) {
+    setTitle(r.title);
+    setCategory(r.category);
+    setTime(r.total_time);
+    setServings(r.servings);
+    setIngredients(r.ingredients.length ? r.ingredients : [{ qty: '', name: '' }]);
+    setSteps(r.steps.length ? r.steps : ['']);
+    setSource(r.source);
+    setPartial(r.partial);
+    setIsPublic(false);
+  }
 
   const close = () => (router.canGoBack() ? router.back() : router.replace('/tin'));
 
@@ -55,6 +73,8 @@ export default function AddRecipe() {
       ingredients: ingredients.filter((x) => x.name.trim()).map((x) => ({ qty: x.qty.trim(), name: x.name.trim() })),
       steps: steps.map((s) => s.trim()).filter(Boolean),
       photos,
+      is_public: isPublic,
+      ...(source ?? {}),
     };
     if (!clean.title) return notify('Add a name', 'Give your recipe a name first.');
     if (!clean.ingredients.length) return notify('Add ingredients', 'Add at least one ingredient.');
@@ -85,6 +105,9 @@ export default function AddRecipe() {
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 140 + insets.bottom, gap: 14, maxWidth: 560, width: '100%', alignSelf: 'center' }}>
+          <ImportCard source={source} partial={partial} onImported={applyImport} autoFocus={params.import === '1'}
+            onClear={() => { setSource(null); setPartial(false); setIsPublic(true); }} />
+
           {/* Photos */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
             <Pressable onPress={addPhotos} accessibilityRole="button" accessibilityLabel="Add photos from library"
@@ -182,6 +205,20 @@ export default function AddRecipe() {
             <Pressable onPress={() => setSteps([...steps, ''])} style={{ minHeight: 50, paddingHorizontal: 16, justifyContent: 'center' }} accessibilityRole="button">
               <T w="semibold" size={15} color={colors.accent}>+ Add step</T>
             </Pressable>
+          </Glass>
+          {/* Who can see it */}
+          <Glass radius={22}>
+            <View style={{ minHeight: 64, paddingHorizontal: 16, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{ flex: 1, gap: 2 }}>
+                <T w="semibold" size={15}>Share on the Fridge</T>
+                <T size={12} color={colors.ink2}>
+                  {isPublic
+                    ? source ? `Everyone can see it, credited to ${source.source_author} on ${platformName(source.source_platform)}.` : 'Everyone can see it on the Fridge.'
+                    : 'Only in your Tin (and groups you share it to).'}
+                </T>
+              </View>
+              <Switch value={isPublic} onChange={setIsPublic} label="Share on the Fridge" />
+            </View>
           </Glass>
         </ScrollView>
       </KeyboardAvoidingView>
