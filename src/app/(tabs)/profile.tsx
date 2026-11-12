@@ -122,7 +122,7 @@ export default function Profile() {
 
       <Label>TIKTOK</Label>
       <Glass radius={22}>
-        <Row>
+        <Row last>
           <View style={{ width: 40, height: 40, borderRadius: 13, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' }}>
             <Icon name="music" size={20} color={colors.white} strokeWidth={2} />
           </View>
@@ -135,12 +135,6 @@ export default function Profile() {
               <T w="bold" size={11}>READY</T>
             </View>
           ) : null}
-        </Row>
-        <Row last>
-          <T size={14} color={colors.ink2} style={{ flex: 1 }}>Share my TikTok videos</T>
-          <View style={{ height: 24, paddingHorizontal: 10, borderRadius: 12, backgroundColor: colors.tintSoft, justifyContent: 'center' }}>
-            <T w="bold" size={11}>COMING SOON</T>
-          </View>
         </Row>
       </Glass>
 

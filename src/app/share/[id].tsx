@@ -100,10 +100,10 @@ export default function ShareSheet() {
                 <Icon name="music" size={18} color={colors.white} strokeWidth={2} />
               </View>
               <View style={{ flex: 1 }}>
-                <T w="bold" size={15}>Post to TikTok</T>
-                <T size={12} color={colors.ink2}>As photo slides you can rearrange</T>
+                <T w="bold" size={15}>Make photo slides</T>
+                <T size={12} color={colors.ink2}>Arrange this recipe as slides for TikTok</T>
               </View>
-              <Switch value={tiktok} onChange={setTiktok} label="Post to TikTok" />
+              <Switch value={tiktok} onChange={setTiktok} label="Make photo slides" />
             </Row>
           </Glass>
         ) : null}

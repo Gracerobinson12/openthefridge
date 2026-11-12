@@ -12,11 +12,14 @@
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Open the Fridge uses your photos so you can add pictures to your recipes.",
         "NSCameraUsageDescription": "Open the Fridge uses the camera so you can take pictures of your recipes."
+      },
+      "config": {
+        "usesNonExemptEncryption": false
       }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#F6F3FA",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -37,7 +40,14 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-splash-screen",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F6F3FA",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180
+        }
+      ],
       [
         "expo-image-picker",
         {

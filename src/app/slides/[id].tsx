@@ -58,13 +58,6 @@ export default function Slides() {
       setSaving(false);
     }
   }
-  async function post() {
-    if (!(await saveOrder())) return;
-    // TikTok posting needs an approved TikTok developer app. Until it's connected we save the
-    // slide order so it's ready the moment posting is switched on. See README → TikTok.
-    notify('Slides saved', 'Posting straight to TikTok turns on once the TikTok connection is approved. Your slide order is saved and ready.');
-  }
-
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <Backdrop variant="violet" />
@@ -73,7 +66,7 @@ export default function Slides() {
           <IconButton icon="back" label="Back" onPress={back} />
           <View style={{ alignItems: 'center' }}>
             <T w="bold" size={17}>Photo Slides</T>
-            <T size={12} color={colors.ink2}>for TikTok{me?.tiktok_handle ? ` · @${me.tiktok_handle}` : ''}</T>
+            <T size={12} color={colors.ink2}>Arrange your recipe as photo slides</T>
           </View>
           <View style={{ width: 44 }} />
         </View>
@@ -153,8 +146,8 @@ export default function Slides() {
 
       <Floating bottom={Math.max(insets.bottom, 18)}>
         <Glass radius={34} strong style={{ height: 68, padding: 8, flexDirection: 'row', gap: 8, boxShadow: shadow.float }}>
-          <Button title="Save order" variant="soft" style={{ flex: 1, height: 52 }} busy={saving} onPress={async () => { if (await saveOrder()) notify('Slide order saved'); }} />
-          <Button title={`Post ${slides.length} slides`} icon="music" style={{ flex: 1.5, height: 52 }} onPress={post} />
+          <Button title="Done" variant="soft" style={{ flex: 1, height: 52 }} onPress={back} />
+          <Button title="Save slides" style={{ flex: 1.5, height: 52 }} busy={saving} onPress={async () => { if (await saveOrder()) notify('Slides saved', 'Your slide order is saved with this recipe.'); }} />
         </Glass>
       </Floating>
     </View>
