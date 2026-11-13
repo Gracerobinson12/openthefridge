@@ -212,7 +212,7 @@ export function createDemoApi(): Api {
     async feed(category) {
       const d = await load();
       return d.recipes
-        .filter((r) => r.author_id !== 'me' && !d.blocks.includes(r.author_id) && !d.hidden.includes(r.id))
+        .filter((r) => r.is_public !== false && !d.blocks.includes(r.author_id) && !d.hidden.includes(r.id))
         .filter((r) => category === 'All' || r.category === category)
         .sort(newest)
         .map((r) => toRecipe(d, r));

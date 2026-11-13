@@ -6,7 +6,7 @@ import { DemoBanner } from '../../components/DemoBanner';
 import { InstallBanner } from '../../components/InstallBanner';
 import { RecipePost } from '../../components/RecipePost';
 import { Screen } from '../../components/Screen';
-import { Avatar, Empty, Loading, T } from '../../components/ui';
+import { Avatar, Button, Empty, Loading, T } from '../../components/ui';
 import { useApp, useData } from '../../lib/store';
 import { colors } from '../../lib/theme';
 
@@ -33,7 +33,11 @@ export default function Fridge() {
       {error ? <Empty title="Couldn’t load the Fridge" body={error} /> : null}
       {loading && !data ? <Loading /> : null}
       {data?.length === 0 && !loading ? (
-        <Empty title="Nothing here yet" body={cat === 'All' ? 'When people post recipes, they’ll show up on your Fridge.' : `No ${cat.toLowerCase()} yet. Be the first!`} />
+        <Empty
+          title={cat === 'All' ? 'The Fridge is empty' : `No ${cat.toLowerCase()} yet`}
+          body={cat === 'All' ? 'Be the first to pin a recipe. Add your own, or import one from a TikTok or YouTube video.' : 'Be the first to add one!'}
+          action={<Button title="Add your first recipe" icon="plus" onPress={() => router.push('/add')} />}
+        />
       ) : null}
       {data?.map((r) => <RecipePost key={r.id} recipe={r} />)}
       <T size={12} color={colors.ink3} style={{ textAlign: 'center' }}>{data?.length ? 'You’re all caught up' : ''}</T>

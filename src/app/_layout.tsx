@@ -6,7 +6,9 @@ import { useEffect } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SheetProvider } from '../components/ActionSheet';
+import { NotConnected } from '../components/NotConnected';
 import { AppProvider, useApp } from '../lib/store';
+import { DEMO_ALLOWED, supabase } from '../lib/supabase';
 import { colors } from '../lib/theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -37,6 +39,7 @@ export default function RootLayout() {
     if (loaded) SplashScreen.hideAsync().catch(() => {});
   }, [loaded]);
   if (!loaded) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+  if (!supabase && !DEMO_ALLOWED) return <NotConnected />;
 
   return (
     <SafeAreaProvider>

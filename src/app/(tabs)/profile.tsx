@@ -15,6 +15,7 @@ export default function Profile() {
   const { api, me, refreshMe } = useApp();
   const params = useLocalSearchParams<{ reset?: string }>();
   const [pwOpen, setPwOpen] = useState(params.reset === '1');
+  const [accountOpen, setAccountOpen] = useState(params.reset === '1');
   const [newPw, setNewPw] = useState('');
   const { data: stats } = useData((a) => a.stats(), []);
   const { data: mine } = useData((a) => a.tin('All'), []);
@@ -154,25 +155,37 @@ export default function Profile() {
       </View>
       {own.length === 0 ? <T size={14} color={colors.ink2}>You haven’t added a recipe yet.</T> : null}
 
-      <Label>ACCOUNT</Label>
-      {pwOpen ? (
-        <Glass radius={22} style={{ padding: 14, gap: 10 }}>
-          <Input value={newPw} onChangeText={setNewPw} placeholder="New password (8+ characters)" secureTextEntry accessibilityLabel="New password" autoComplete="new-password" />
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <Button title="Cancel" variant="soft" style={{ flex: 1 }} onPress={() => setPwOpen(false)} />
-            <Button title="Save password" style={{ flex: 1 }} onPress={savePassword} />
+      <Pressable onPress={() => setAccountOpen(!accountOpen)} accessibilityRole="button" accessibilityState={{ expanded: accountOpen }}>
+        <Glass radius={22} style={{ minHeight: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Icon name="settings" size={20} />
+          <T w="bold" size={15} style={{ flex: 1 }}>Account</T>
+          <View style={{ transform: [{ rotate: accountOpen ? '90deg' : '0deg' }] }}>
+            <Icon name="chevron" size={16} color={colors.ink3} strokeWidth={2.2} />
           </View>
         </Glass>
+      </Pressable>
+      {accountOpen ? (
+        <>
+        {pwOpen ? (
+          <Glass radius={22} style={{ padding: 14, gap: 10 }}>
+            <Input value={newPw} onChangeText={setNewPw} placeholder="New password (8+ characters)" secureTextEntry accessibilityLabel="New password" autoComplete="new-password" />
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Button title="Cancel" variant="soft" style={{ flex: 1 }} onPress={() => setPwOpen(false)} />
+              <Button title="Save password" style={{ flex: 1 }} onPress={savePassword} />
+            </View>
+          </Glass>
+        ) : null}
+        <Glass radius={22}>
+          {!pwOpen ? <Row onPress={() => setPwOpen(true)}><T w="semibold" size={15}>Change password</T></Row> : null}
+          {me?.is_admin ? <Row onPress={() => router.push('/admin')}><T w="semibold" size={15} color={colors.accent}>Moderation</T></Row> : null}
+          <Row onPress={() => router.push('/support')}><T w="semibold" size={15}>Help & Support</T></Row>
+          <Row onPress={() => router.push('/legal')}><T w="semibold" size={15}>Terms & Privacy</T></Row>
+          <Row onPress={signOut}><T w="semibold" size={15}>Log out</T></Row>
+          {api.mode === 'demo' ? <Row onPress={resetTestData}><T w="semibold" size={15} color={colors.ink2}>Reset test data</T></Row> : null}
+          <Row last onPress={api.mode === 'demo' ? resetTestData : deleteAccount}><T w="semibold" size={15} color={colors.heart}>Delete my account</T></Row>
+        </Glass>
+        </>
       ) : null}
-      <Glass radius={22}>
-        {!pwOpen ? <Row onPress={() => setPwOpen(true)}><T w="semibold" size={15}>Change password</T></Row> : null}
-        {me?.is_admin ? <Row onPress={() => router.push('/admin')}><T w="semibold" size={15} color={colors.accent}>Moderation</T></Row> : null}
-        <Row onPress={() => router.push('/support')}><T w="semibold" size={15}>Help & Support</T></Row>
-        <Row onPress={() => router.push('/legal')}><T w="semibold" size={15}>Terms & Privacy</T></Row>
-        <Row onPress={signOut}><T w="semibold" size={15}>Log out</T></Row>
-        {api.mode === 'demo' ? <Row onPress={resetTestData}><T w="semibold" size={15} color={colors.ink2}>Reset test data</T></Row> : null}
-        <Row last onPress={api.mode === 'demo' ? resetTestData : deleteAccount}><T w="semibold" size={15} color={colors.heart}>Delete my account</T></Row>
-      </Glass>
     </Screen>
   );
 }

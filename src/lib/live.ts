@@ -146,7 +146,7 @@ export function createLiveApi(sb: SupabaseClient): Api {
     async feed(category) {
       const me = await uid();
       const blocked = await blockedIds(me);
-      let q = sb.from('recipes').select(RECIPE_SELECT).eq('is_public', true).eq('is_hidden', false).neq('author_id', me);
+      let q = sb.from('recipes').select(RECIPE_SELECT).eq('is_public', true).eq('is_hidden', false);
       if (category !== 'All') q = q.eq('category', category);
       if (blocked.length) q = q.not('author_id', 'in', `(${blocked.join(',')})`);
       const rows = check(await q.order('created_at', { ascending: false }).limit(60));
