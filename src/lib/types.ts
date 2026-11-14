@@ -11,7 +11,14 @@ export type Profile = {
   banned?: boolean;
 };
 
-export type Ingredient = { qty: string; name: string };
+export type Ingredient = {
+  qty: string;
+  name: string;
+  /** Only while editing a recipe built from notes: the AI added this ingredient to complete the dish. */
+  suggested?: boolean;
+  /** Only while editing: the amount wasn't in the notes, the AI estimated it. */
+  qty_guessed?: boolean;
+};
 
 export type Recipe = {
   id: string;
@@ -52,7 +59,8 @@ export type ImportedRecipe = {
   steps: string[];
   /** True when the video caption/description didn't include everything (e.g. TikTok with a short caption). */
   partial: boolean;
-  source: VideoSource;
+  /** Who to credit for a video import; null for a recipe built from the person's own notes. */
+  source: VideoSource | null;
 };
 
 export type NewRecipe = {

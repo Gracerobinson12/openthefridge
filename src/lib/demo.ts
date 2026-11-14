@@ -266,6 +266,44 @@ export function createDemoApi(): Api {
       };
       return sample;
     },
+    async buildFromNotes(notes) {
+      // Test mode: no AI connected, so return a realistic sample that shows suggestions and guessed amounts.
+      await new Promise((r) => setTimeout(r, 900));
+      const firstLine = notes.split('\n')[0].split(/[-:–,]/)[0].trim();
+      const sample: ImportedRecipe = {
+        title: firstLine ? firstLine.charAt(0).toUpperCase() + firstLine.slice(1, 60) : 'My recipe',
+        category: 'Lunch',
+        total_time: '1 hr',
+        servings: '6',
+        ingredients: [
+          { qty: '1 lb', name: 'Ground beef', qty_guessed: true },
+          { qty: '1 can', name: 'Kidney beans', qty_guessed: true },
+          { qty: '1', name: 'Onion, diced', qty_guessed: true },
+          { qty: '2 tbsp', name: 'Chili powder', qty_guessed: true },
+          { qty: '1 can', name: 'Diced tomatoes' },
+          { qty: '2 cloves', name: 'Garlic, minced', suggested: true, qty_guessed: true },
+          { qty: '1 tsp', name: 'Cumin', suggested: true, qty_guessed: true },
+          { qty: '1 tsp', name: 'Salt', suggested: true, qty_guessed: true },
+        ],
+        steps: [
+          'Brown the ground beef in a large pot over medium-high heat, about 6 minutes. Drain the fat.',
+          'Add the onion and garlic and cook until soft, about 4 minutes.',
+          'Stir in the chili powder, cumin and salt and cook 1 minute.',
+          'Add the tomatoes and beans. Bring to a boil, then lower the heat.',
+          'Simmer uncovered for 40 minutes, stirring now and then. Taste and adjust the seasoning.',
+        ],
+        partial: false,
+        source: null,
+      };
+      return sample;
+    },
+    async rewriteSteps({ ingredients, steps }) {
+      // Test mode: drop steps' mentions by keeping only steps that still match an ingredient, as a stand-in for the AI.
+      await new Promise((r) => setTimeout(r, 700));
+      const have = ingredients.map((i) => i.name.split(',')[0].trim().toLowerCase());
+      return steps.map((s) => s.replace(/\b(garlic|cumin|salt)\b( and | and the |, )?/gi, (m, w) => (have.includes(String(w).toLowerCase()) ? m : ''))
+        .replace(/\s{2,}/g, ' ').replace(/ ,/g, ',').replace(/the and/g, 'the'));
+    },
     async deleteRecipe(id) {
       const d = await load();
       d.recipes = d.recipes.filter((r) => r.id !== id);

@@ -98,8 +98,8 @@ export const PRIVACY: LegalDoc = {
       'We don\'t sell or rent your personal information, and we don\'t share it for advertising.',
     ] },
     { h: 'Service providers', p: [
-      'We use a few companies to run the app, and they process data only on our behalf: Supabase (database, sign-in and photo storage) and Vercel (website hosting). Their servers are in the United States.',
-      'If you import a recipe from a video, the video link (and, for TikTok, the video\'s public caption) is sent to Google\'s Gemini API so it can write out the recipe. We don\'t send your name or email with it.',
+      'We use a few companies to run the app, and they process data only on our behalf: Supabase (database, sign-in and photo storage) and Vercel (website hosting), with servers in the United States, and, for the recipe helper, GreenPT (European Union) and Google (Gemini API).',
+      'If you import a recipe from a YouTube video, the video link is sent to Google\'s Gemini API so it can watch the video and write out the recipe. Text is handled differently: a TikTok video\'s public caption, notes you paste, and steps you ask us to rewrite are sent to GreenPT, an AI service running on renewable-powered servers in the European Union, with Google\'s Gemini API as an automatic backup. We don\'t send your name or email with any of it.',
       'If you choose to post to TikTok, the content you post is sent to TikTok and handled under TikTok\'s privacy policy.',
       'We may disclose information if the law requires it, or to protect the safety of people using the app.',
     ] },

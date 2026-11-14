@@ -76,6 +76,20 @@ export function createLiveApi(sb: SupabaseClient): Api {
     return sb.storage.from('recipe-photos').getPublicUrl(path).data.publicUrl;
   }
 
+  /** Calls the import-recipe Edge Function and surfaces its friendly error messages. */
+  async function recipeHelper(body: Record<string, unknown>): Promise<unknown> {
+    const { data, error } = await sb.functions.invoke('import-recipe', { body });
+    if (error) {
+      let msg = error.message;
+      try {
+        const res = await (error as { context?: Response }).context?.json();
+        if (res?.error) msg = res.error;
+      } catch { /* keep the generic message */ }
+      throw new Error(msg);
+    }
+    return data;
+  }
+
   const api: Api = {
     mode: 'live',
 
@@ -184,17 +198,13 @@ export function createLiveApi(sb: SupabaseClient): Api {
     async importFromLink(url) {
       const link = parseVideoLink(url);
       if (!link) throw new Error('Paste a TikTok or YouTube video link.');
-      const { data, error } = await sb.functions.invoke('import-recipe', { body: { url: link.url } });
-      if (error) {
-        // The function sends a friendly message in its JSON body; show that instead of a generic error.
-        let msg = error.message;
-        try {
-          const body = await (error as { context?: Response }).context?.json();
-          if (body?.error) msg = body.error;
-        } catch { /* keep generic message */ }
-        throw new Error(msg);
-      }
-      return data as ImportedRecipe;
+      return (await recipeHelper({ url: link.url })) as ImportedRecipe;
+    },
+    async buildFromNotes(notes) {
+      return (await recipeHelper({ notes })) as ImportedRecipe;
+    },
+    async rewriteSteps(input) {
+      return ((await recipeHelper({ rewrite: input })) as { steps: string[] }).steps;
     },
     async deleteRecipe(id) {
       check(await sb.from('recipes').delete().eq('id', id));

@@ -30,9 +30,14 @@ export default function AddRecipe() {
   const [source, setSource] = useState<VideoSource | null>(null);
   const [partial, setPartial] = useState(false);
   const [isPublic, setIsPublic] = useState(true);
+  const [fromNotes, setFromNotes] = useState(false);
+  /** Ingredients removed from a notes recipe, so steps that still mention them can be flagged. */
+  const [removed, setRemoved] = useState<string[]>([]);
+  const [rewriting, setRewriting] = useState(false);
 
-  // Fill the form from an imported video. Imported recipes stay private in your Tin by default.
-  function applyImport(r: ImportedRecipe) {
+  // Fill the form from a video import or from notes.
+  // Video imports stay private by default (someone else's recipe); notes are the person's own, so sharing stays on.
+  function applyImport(r: ImportedRecipe, from: 'video' | 'notes') {
     setTitle(r.title);
     setCategory(r.category);
     setTime(r.total_time);
@@ -41,7 +46,55 @@ export default function AddRecipe() {
     setSteps(r.steps.length ? r.steps : ['']);
     setSource(r.source);
     setPartial(r.partial);
-    setIsPublic(false);
+    setRemoved([]);
+    setFromNotes(from === 'notes');
+    setIsPublic(from === 'notes');
+  }
+  function clearImport() {
+    if (fromNotes) {
+      // "Start over": empty the form.
+      setTitle(''); setTime(''); setServings('');
+      setIngredients([{ qty: '', name: '' }, { qty: '', name: '' }]);
+      setSteps(['']);
+    }
+    setSource(null); setPartial(false); setFromNotes(false); setRemoved([]); setIsPublic(true);
+  }
+
+  const suggestedCount = ingredients.filter((x) => x.suggested).length;
+  const keyOf = (name: string) => name.split(',')[0].trim().toLowerCase();
+  const keep = (i: number) => setIngredients(ingredients.map((x, j) => (j === i ? { ...x, suggested: false } : x)));
+  function removeIngredient(i: number) {
+    const gone = ingredients[i];
+    setIngredients(ingredients.filter((_, j) => j !== i));
+    if (fromNotes && gone.name.trim()) setRemoved([...removed, keyOf(gone.name)]);
+  }
+  const keepAll = () => setIngredients(ingredients.map((x) => ({ ...x, suggested: false })));
+  function removeAllSuggested() {
+    setRemoved([...removed, ...ingredients.filter((x) => x.suggested).map((x) => keyOf(x.name))]);
+    const rest = ingredients.filter((x) => !x.suggested);
+    setIngredients(rest.length ? rest : [{ qty: '', name: '' }]);
+  }
+  /** Removed ingredients a step still mentions. */
+  const mentions = (step: string) => {
+    const t = step.toLowerCase();
+    return removed.filter((k) => k && (t.includes(k) || (k.endsWith('s') && t.includes(k.slice(0, -1)))));
+  };
+  const flaggedSteps = steps.filter((st) => mentions(st).length).length;
+  async function rewrite() {
+    setRewriting(true);
+    try {
+      const next = await api.rewriteSteps({
+        title: title.trim(),
+        ingredients: ingredients.filter((x) => x.name.trim()).map((x) => ({ qty: x.qty.trim(), name: x.name.trim() })),
+        steps: steps.map((x) => x.trim()).filter(Boolean),
+      });
+      setSteps(next.length ? next : steps);
+      setRemoved([]);
+    } catch (e) {
+      notify('Couldn’t rewrite the steps', (e as Error).message);
+    } finally {
+      setRewriting(false);
+    }
   }
 
   const close = () => (router.canGoBack() ? router.back() : router.replace('/tin'));
@@ -105,8 +158,8 @@ export default function AddRecipe() {
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 140 + insets.bottom, gap: 14, maxWidth: 560, width: '100%', alignSelf: 'center' }}>
-          <ImportCard source={source} partial={partial} onImported={applyImport} autoFocus={params.import === '1'}
-            onClear={() => { setSource(null); setPartial(false); setIsPublic(true); }} />
+          <ImportCard source={source} partial={partial} fromNotes={fromNotes} suggestedCount={suggestedCount}
+            onImported={applyImport} onClear={clearImport} autoFocus={params.import === '1'} />
 
           {/* Photos */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
@@ -168,15 +221,40 @@ export default function AddRecipe() {
 
           {/* Ingredients */}
           <Label>INGREDIENTS</Label>
+          {suggestedCount > 0 ? (
+            <Glass radius={18} strong style={{ padding: 12, gap: 10 }}>
+              <T size={13} color={colors.ink2}>
+                <T w="bold" size={13}>{suggestedCount} suggested</T> to complete the dish. They weren’t in your notes.
+              </T>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Button small title="Keep all" style={{ flex: 1 }} onPress={keepAll} />
+                <Button small variant="soft" title="Remove all" style={{ flex: 1 }} onPress={removeAllSuggested} />
+              </View>
+            </Glass>
+          ) : null}
           <Glass radius={22}>
             {ingredients.map((it, i) => (
-              <View key={i} style={{ minHeight: 52, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(20,17,26,0.07)' }}>
-                <TextInput value={it.qty} onChangeText={(v) => setIng(i, { qty: v })} placeholder="Amount" placeholderTextColor={colors.ink3} accessibilityLabel={`Amount ${i + 1}`} style={[field, { width: 76, fontFamily: font.bold }]} />
-                <TextInput value={it.name} onChangeText={(v) => setIng(i, { name: v })} placeholder="Ingredient" placeholderTextColor={colors.ink3} accessibilityLabel={`Ingredient ${i + 1}`} style={[field, { flex: 1 }]} />
-                {ingredients.length > 1 ? (
-                  <Pressable onPress={() => setIngredients(ingredients.filter((_, j) => j !== i))} accessibilityLabel={`Remove ingredient ${i + 1}`} hitSlop={10}>
-                    <Icon name="close" size={14} color={colors.ink3} strokeWidth={2.4} />
-                  </Pressable>
+              <View key={i} style={{ paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(20,17,26,0.07)', backgroundColor: it.suggested ? 'rgba(106,63,214,0.06)' : 'transparent' }}>
+                <View style={{ minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <TextInput value={it.qty} onChangeText={(v) => setIng(i, { qty: v, qty_guessed: false })} placeholder="Amount" placeholderTextColor={colors.ink3} accessibilityLabel={`Amount ${i + 1}`} style={[field, { width: 76, fontFamily: font.bold }]} />
+                  <TextInput value={it.name} onChangeText={(v) => setIng(i, { name: v })} placeholder="Ingredient" placeholderTextColor={colors.ink3} accessibilityLabel={`Ingredient ${i + 1}`} style={[field, { flex: 1 }]} />
+                  {ingredients.length > 1 && !it.suggested ? (
+                    <Pressable onPress={() => removeIngredient(i)} accessibilityLabel={`Remove ingredient ${i + 1}`} hitSlop={10}>
+                      <Icon name="close" size={14} color={colors.ink3} strokeWidth={2.4} />
+                    </Pressable>
+                  ) : null}
+                </View>
+                {it.suggested ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingBottom: 10 }}>
+                    <View style={{ height: 22, paddingHorizontal: 8, borderRadius: 11, backgroundColor: colors.accent, justifyContent: 'center' }}>
+                      <T w="bold" size={11} color={colors.white}>SUGGESTED</T>
+                    </View>
+                    <T size={12} color={colors.ink2} style={{ flex: 1 }}>Not in your notes</T>
+                    <Button small title="Keep" onPress={() => keep(i)} style={{ height: 32 }} accessibilityLabel={`Keep ${it.name}`} />
+                    <Button small variant="soft" title="Remove" onPress={() => removeIngredient(i)} style={{ height: 32 }} accessibilityLabel={`Remove ${it.name}`} />
+                  </View>
+                ) : it.qty_guessed ? (
+                  <T size={11} color={colors.accent} style={{ paddingBottom: 8, marginTop: -6 }}>Amount guessed. Check it.</T>
                 ) : null}
               </View>
             ))}
@@ -187,14 +265,25 @@ export default function AddRecipe() {
 
           {/* Steps */}
           <Label>STEPS</Label>
+          {flaggedSteps > 0 ? (
+            <Glass radius={18} strong style={{ padding: 12, gap: 10 }}>
+              <T size={13} color={colors.ink2}>
+                <T w="bold" size={13} color={colors.heart}>{flaggedSteps} {flaggedSteps === 1 ? 'step still mentions' : 'steps still mention'}</T> an ingredient you removed. Edit them, or let us rewrite the steps to match your ingredients.
+              </T>
+              <Button small title="Rewrite the steps for me" onPress={rewrite} busy={rewriting} />
+            </Glass>
+          ) : null}
           <Glass radius={22}>
             {steps.map((s, i) => (
               <View key={i} style={{ flexDirection: 'row', gap: 12, padding: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(20,17,26,0.07)' }}>
                 <View style={{ width: 26, height: 26, borderRadius: 9, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' }}>
                   <T w="bold" size={13} color={colors.white}>{i + 1}</T>
                 </View>
-                <TextInput value={s} onChangeText={(v) => setStep(i, v)} multiline placeholder={i === 0 ? 'Heat oven to 350°F…' : 'Next step…'} placeholderTextColor={colors.ink3} accessibilityLabel={`Step ${i + 1}`}
-                  style={[field, { flex: 1, minHeight: 44, paddingTop: 3, textAlignVertical: 'top' }]} />
+                <View style={{ flex: 1 }}>
+                  <TextInput value={s} onChangeText={(v) => setStep(i, v)} multiline placeholder={i === 0 ? 'Heat oven to 350°F…' : 'Next step…'} placeholderTextColor={colors.ink3} accessibilityLabel={`Step ${i + 1}`}
+                    style={[field, { minHeight: 44, paddingTop: 3, textAlignVertical: 'top' }]} />
+                  {mentions(s).length ? <T size={12} color={colors.heart}>Mentions {mentions(s).join(', ')}, which you removed.</T> : null}
+                </View>
                 {steps.length > 1 ? (
                   <Pressable onPress={() => setSteps(steps.filter((_, j) => j !== i))} accessibilityLabel={`Remove step ${i + 1}`} hitSlop={10} style={{ paddingTop: 5 }}>
                     <Icon name="close" size={14} color={colors.ink3} strokeWidth={2.4} />
