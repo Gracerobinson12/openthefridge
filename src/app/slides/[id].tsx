@@ -1,8 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as MediaLibrary from 'expo-media-library';
+import ViewShot from 'react-native-view-shot';
 import { Icon } from '../../components/Icon';
+import { SlideCard } from '../../components/SlideCard';
+import { SlidePreviewModal } from '../../components/SlidePreviewModal';
 import { Backdrop, Button, Floating, Glass, IconButton, Label, Loading, T } from '../../components/ui';
 import { notify } from '../../lib/dialog';
 import { buildSlides, type Slide } from '../../lib/slides';
@@ -20,6 +24,9 @@ export default function Slides() {
   const [sel, setSel] = useState(0);
   const [caption, setCaption] = useState('');
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const shotRefs = useRef<(ViewShot | null)[]>([]);
 
   useEffect(() => {
     if (!recipe) return;
@@ -58,6 +65,48 @@ export default function Slides() {
       setSaving(false);
     }
   }
+
+  async function saveToPhotos() {
+    setExporting(true);
+    try {
+      if (Platform.OS !== 'web') {
+        const perm = await MediaLibrary.requestPermissionsAsync();
+        if (!perm.granted) {
+          notify('Photos access needed', 'Allow access to Photos in Settings, then try again.');
+          return;
+        }
+      }
+      for (let i = 0; i < slides.length; i++) {
+        const ref = shotRefs.current[i];
+        if (!ref?.capture) continue;
+        const uri = await ref.capture();
+        if (Platform.OS === 'web') {
+          const a = document.createElement('a');
+          a.href = uri;
+          a.download = `slide-${i + 1}.png`;
+          a.click();
+        } else {
+          await MediaLibrary.saveToLibraryAsync(uri);
+        }
+      }
+      notify(
+        'Saved!',
+        Platform.OS === 'web'
+          ? 'Your slides downloaded as images. Upload them to TikTok, in order, to build the slideshow.'
+          : 'Saved to your Photos, in order. Open TikTok, start a new post, and pick them from your camera roll.'
+      );
+    } catch (e) {
+      notify('Couldn’t export', (e as Error).message);
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function exportSlides() {
+    if (!(await saveOrder())) return;
+    await saveToPhotos();
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <Backdrop variant="violet" />
@@ -68,37 +117,15 @@ export default function Slides() {
             <T w="bold" size={17}>Photo Slides</T>
             <T size={12} color={colors.ink2}>Arrange your recipe as photo slides</T>
           </View>
-          <View style={{ width: 44 }} />
+          <Pressable onPress={() => setPreviewOpen(true)} accessibilityRole="button" accessibilityLabel="Preview slides" hitSlop={8} style={{ width: 44, alignItems: 'flex-end' }}>
+            <T w="semibold" size={14} color={colors.accent}>Preview</T>
+          </Pressable>
         </View>
 
         {/* Preview */}
         <View style={{ alignItems: 'center' }}>
-          <View style={{ width: 206, height: 366, borderRadius: 24, backgroundColor: cur.bg, borderWidth: 1, borderColor: colors.white, boxShadow: '0px 18px 40px rgba(40,25,70,0.18)', overflow: 'hidden', padding: 16, paddingTop: 28, gap: 8 }}>
-            {cur.isPhoto && cur.photo ? <Image source={{ uri: cur.photo }} style={StyleSheet.absoluteFill} resizeMode="cover" /> : null}
-            {cur.isPhoto && cur.photo ? <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(20,17,26,0.25)' }]} /> : null}
-            <View style={{ position: 'absolute', top: 10, left: 12, right: 12, flexDirection: 'row', gap: 3 }}>
-              {slides.map((s, i) => <View key={s.id} style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: i === sel ? colors.ink : 'rgba(20,17,26,0.2)' }} />)}
-            </View>
-            {(() => {
-              const onPhoto = cur.isPhoto && !!cur.photo;
-              const ink = onPhoto ? colors.white : colors.ink;
-              return (
-                <>
-                  <T w="heavy" size={10} color={onPhoto ? colors.white : colors.ink2} style={{ letterSpacing: 1 }}>{cur.kicker}</T>
-                  <T w="heavy" size={20} color={ink}>{cur.title}</T>
-                  {cur.isPhoto && !cur.photo ? (
-                    <View style={{ flex: 1, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.5)', alignItems: 'center', justifyContent: 'center' }}>
-                      <Icon name="camera" size={26} color={colors.ink2} strokeWidth={1.5} />
-                      <T size={11} color={colors.ink2}>Add a photo to the recipe</T>
-                    </View>
-                  ) : null}
-                  {onPhoto ? <View style={{ flex: 1 }} /> : null}
-                  <View style={{ gap: 5 }}>
-                    {cur.lines.map((l, i) => <T key={i} size={12} color={ink} style={{ lineHeight: 16 }}>{l}</T>)}
-                  </View>
-                </>
-              );
-            })()}
+          <View style={{ borderRadius: 24, boxShadow: '0px 18px 40px rgba(40,25,70,0.18)', overflow: 'hidden' }}>
+            <SlideCard slide={cur} index={sel} total={slides.length} />
             <View style={{ position: 'absolute', right: 12, bottom: 12, height: 22, paddingHorizontal: 8, borderRadius: 11, backgroundColor: 'rgba(20,17,26,0.75)', justifyContent: 'center' }}>
               <T w="bold" size={11} color={colors.white}>{sel + 1} / {slides.length}</T>
             </View>
@@ -144,10 +171,21 @@ export default function Slides() {
         </Pressable>
       </ScrollView>
 
+      {/* Hidden full-quality renders, captured for export */}
+      <View pointerEvents="none" style={{ position: 'absolute', top: -9999, left: 0, opacity: 0 }}>
+        {slides.map((s, i) => (
+          <ViewShot key={s.id} ref={(r) => { shotRefs.current[i] = r; }} options={{ format: 'png', quality: 1 }}>
+            <SlideCard slide={s} index={i} total={slides.length} />
+          </ViewShot>
+        ))}
+      </View>
+
+      <SlidePreviewModal visible={previewOpen} slides={slides} onClose={() => setPreviewOpen(false)} />
+
       <Floating bottom={Math.max(insets.bottom, 18)}>
         <Glass radius={34} strong style={{ height: 68, padding: 8, flexDirection: 'row', gap: 8, boxShadow: shadow.float }}>
           <Button title="Done" variant="soft" style={{ flex: 1, height: 52 }} onPress={back} />
-          <Button title="Save slides" style={{ flex: 1.5, height: 52 }} busy={saving} onPress={async () => { if (await saveOrder()) notify('Slides saved', 'Your slide order is saved with this recipe.'); }} />
+          <Button title="Save to Photos" style={{ flex: 1.8, height: 52 }} busy={saving || exporting} onPress={exportSlides} />
         </Glass>
       </Floating>
     </View>

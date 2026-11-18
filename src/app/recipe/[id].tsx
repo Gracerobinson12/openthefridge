@@ -234,13 +234,11 @@ export default function RecipeScreen() {
 
       <Floating bottom={Math.max(insets.bottom, 18)}>
         <Glass radius={34} strong style={{ height: 68, padding: 8, flexDirection: 'row', gap: 8, boxShadow: shadow.float }}>
-          <Button title="Share" icon="share" style={{ flex: 1, height: 52 }} onPress={() => router.push(`/share/${recipe.id}`)} />
-          {mine ? (
-            <Button title="TikTok slides" icon="music" variant="soft" style={{ flex: 1, height: 52 }} onPress={() => router.push(`/slides/${recipe.id}`)} />
-          ) : (
-            <Button title={saved ? 'In your Tin' : 'Save to Tin'} icon="tin" variant="soft" style={{ flex: 1, height: 52 }}
-              onPress={() => { setSaved(!saved); api.setSaved(recipe.id, !saved).then(changed).catch(() => setSaved(saved)); }} />
-          )}
+           <Button title="Share" icon="share" style={{ flex: 1, height: 52 }} onPress={() => router.push(`/share/${recipe.id}`)} />
+            {!mine ? (
+              <Button title={saved ? 'In your Tin' : 'Save to Tin'} icon="tin" variant="soft" style={{ flex: 1, height: 52 }}
+                onPress={() => { setSaved(!saved); api.setSaved(recipe.id, !saved).then(changed).catch(() => setSaved(saved)); }} />
+        ) : null}
         </Glass>
       </Floating>
     </View>

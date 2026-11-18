@@ -53,6 +53,13 @@
         {
           "photosPermission": "Open the Fridge uses your photos so you can add pictures to your recipes."
         }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Open the Fridge saves your photo slides to your camera roll so you can post them to TikTok.",
+          "savePhotosPermission": "Open the Fridge saves your photo slides to your camera roll so you can post them to TikTok."
+        }
       ]
     ],
     "scheme": "openthefridge"
