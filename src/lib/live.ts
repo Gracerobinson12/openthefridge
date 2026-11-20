@@ -200,8 +200,8 @@ export function createLiveApi(sb: SupabaseClient): Api {
       if (!link) throw new Error('Paste a TikTok or YouTube video link.');
       return (await recipeHelper({ url: link.url })) as ImportedRecipe;
     },
-    async buildFromNotes(notes) {
-      return (await recipeHelper({ notes })) as ImportedRecipe;
+    async buildFromNotes(notes, name) {
+      return (await recipeHelper({ notes, name })) as ImportedRecipe;
     },
     async rewriteSteps(input) {
       return ((await recipeHelper({ rewrite: input })) as { steps: string[] }).steps;

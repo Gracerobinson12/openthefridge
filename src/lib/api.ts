@@ -31,8 +31,7 @@ export interface Api {
   /** Turns a TikTok or YouTube link into a draft recipe (not saved yet). */
   importFromLink(url: string): Promise<ImportedRecipe>;
   /** Turns rough notes into a full draft recipe. Ingredients the AI added are marked `suggested`. */
-  buildFromNotes(notes: string): Promise<ImportedRecipe>;
-  /** Rewrites the steps to match the current ingredient list (after suggestions were removed). */
+  buildFromNotes(notes: string, name?: string): Promise<ImportedRecipe>;  /** Rewrites the steps to match the current ingredient list (after suggestions were removed). */
   rewriteSteps(input: { title: string; ingredients: { qty: string; name: string }[]; steps: string[] }): Promise<string[]>;
   deleteRecipe(id: string): Promise<void>;
   setSlideOrder(id: string, order: string[]): Promise<void>;

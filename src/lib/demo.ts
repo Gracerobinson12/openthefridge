@@ -266,13 +266,12 @@ export function createDemoApi(): Api {
       };
       return sample;
     },
-    async buildFromNotes(notes) {
+    async buildFromNotes(notes, name) {
       // Test mode: no AI connected, so return a realistic sample that shows suggestions and guessed amounts.
       await new Promise((r) => setTimeout(r, 900));
       const firstLine = notes.split('\n')[0].split(/[-:–,]/)[0].trim();
       const sample: ImportedRecipe = {
-        title: firstLine ? firstLine.charAt(0).toUpperCase() + firstLine.slice(1, 60) : 'My recipe',
-        category: 'Lunch',
+        title: name?.trim() || (firstLine ? firstLine.charAt(0).toUpperCase() + firstLine.slice(1, 60) : 'My recipe'),        category: 'Lunch',
         total_time: '1 hr',
         servings: '6',
         ingredients: [

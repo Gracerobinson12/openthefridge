@@ -26,7 +26,7 @@ export default function Slides() {
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const shotRefs = useRef<(ViewShot | null)[]>([]);
+  const shotRefs = useRef<any[]>([]);
 
   useEffect(() => {
     if (!recipe) return;

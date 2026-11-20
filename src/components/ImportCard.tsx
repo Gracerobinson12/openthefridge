@@ -36,6 +36,7 @@ export function ImportCard({ source, partial, fromNotes, suggestedCount, onImpor
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [name, setName] = useState('');
 
   async function runVideo(text = link) {
     setError(null);
@@ -56,11 +57,12 @@ export function ImportCard({ source, partial, fromNotes, suggestedCount, onImpor
     setError(null);
     const text = notes.trim();
     if (text.length < 3) return setError('Paste or type your notes first. A dish name and a few ingredients is enough.');
-    if (hasBlockedWord(text)) return setError(KIND_MESSAGE);
+    if (hasBlockedWord(text) || hasBlockedWord(name)) return setError(KIND_MESSAGE);
     setBusy(true);
     try {
-      onImported(await api.buildFromNotes(text), 'notes');
+      onImported(await api.buildFromNotes(text, name.trim() || undefined), 'notes');
       setNotes('');
+      setName('');
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -151,10 +153,14 @@ export function ImportCard({ source, partial, fromNotes, suggestedCount, onImpor
       </T>
 
       {notesMode ? (
-        <TextInput value={notes} onChangeText={(v) => { setNotes(v); setError(null); }} multiline editable={!busy} maxLength={4000}
-          placeholder={'e.g.\nmom’s chili\nground beef, kidney beans, onion,\nchili powder, can of tomatoes'} placeholderTextColor={colors.ink3}
-          accessibilityLabel="Your notes" autoFocus={false}
-          style={{ minHeight: 120, borderRadius: 16, padding: 14, backgroundColor: 'rgba(255,255,255,0.75)', borderWidth: 1, borderColor: colors.hairline, fontFamily: font.medium, fontSize: 15, color: colors.ink, textAlignVertical: 'top' }} />
+        <>
+          <Input value={name} onChangeText={(v) => { setName(v); setError(null); }} placeholder="Recipe name (optional)"
+            accessibilityLabel="Recipe name" editable={!busy} />
+          <TextInput value={notes} onChangeText={(v) => { setNotes(v); setError(null); }} multiline editable={!busy} maxLength={4000}
+            placeholder={'e.g.\nground beef, kidney beans, onion,\nchili powder, can of tomatoes'} placeholderTextColor={colors.ink3}
+            accessibilityLabel="Your notes" autoFocus={false}
+            style={{ minHeight: 120, borderRadius: 16, padding: 14, backgroundColor: 'rgba(255,255,255,0.75)', borderWidth: 1, borderColor: colors.hairline, fontFamily: font.medium, fontSize: 15, color: colors.ink, textAlignVertical: 'top' }} />
+        </>
       ) : (
         <Input value={link} onChangeText={(v) => { setLink(v); setError(null); }} placeholder="tiktok.com/… or youtube.com/…"
           accessibilityLabel="Video link" autoCapitalize="none" autoCorrect={false} keyboardType="url" autoFocus={autoFocus}
