@@ -28,6 +28,7 @@ export interface Api {
   tin(category: Category | 'All'): Promise<Recipe[]>;
   recipe(id: string): Promise<Recipe | null>;
   createRecipe(input: NewRecipe): Promise<string>;
+  updateRecipe(id: string, input: NewRecipe): Promise<void>;
   /** Turns a TikTok or YouTube link into a draft recipe (not saved yet). */
   importFromLink(url: string): Promise<ImportedRecipe>;
   /** Turns rough notes into a full draft recipe. Ingredients the AI added are marked `suggested`. */

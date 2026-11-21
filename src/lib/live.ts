@@ -195,6 +195,11 @@ export function createLiveApi(sb: SupabaseClient): Api {
       );
       return (row as { id: string }).id;
     },
+    async updateRecipe(id, input) {
+      const me = await uid();
+      const photos = await Promise.all(input.photos.map((p, i) => uploadPhoto(me, p, i)));
+      check(await sb.from('recipes').update({ ...input, photos }).eq('id', id).eq('author_id', me));
+    },
     async importFromLink(url) {
       const link = parseVideoLink(url);
       if (!link) throw new Error('Paste a TikTok or YouTube video link.');

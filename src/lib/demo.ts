@@ -237,6 +237,13 @@ export function createDemoApi(): Api {
       await save();
       return id;
     },
+    async updateRecipe(id, input) {
+      const d = await load();
+      const r = d.recipes.find((x) => x.id === id);
+      if (!r) throw new Error('Recipe not found.');
+      Object.assign(r, input, { is_public: input.is_public ?? r.is_public });
+      await save();
+    },
     async importFromLink(url) {
       // Test mode: no AI connected yet, so return a realistic sample after a short pause.
       const link = parseVideoLink(url);

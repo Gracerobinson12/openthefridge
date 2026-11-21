@@ -52,8 +52,9 @@ export default function RecipeScreen() {
   async function more() {
     if (!recipe) return;
     if (mine) {
-      const i = await sheet('Recipe options', [{ label: 'Delete recipe', destructive: true }]);
-      if (i === 0 && (await confirm('Delete this recipe?', 'This can’t be undone.', 'Delete'))) {
+      const i = await sheet('Recipe options', [{ label: 'Edit recipe' }, { label: 'Delete recipe', destructive: true }]);
+      if (i === 0) return router.push(`/add?id=${recipe.id}`);
+      if (i === 1 && (await confirm('Delete this recipe?', 'This can’t be undone.', 'Delete'))) {
         await api.deleteRecipe(recipe.id);
         changed();
         back();

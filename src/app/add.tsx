@@ -1,11 +1,12 @@
 import * as ImagePicker from 'expo-image-picker';
+import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
 import { ImportCard, platformName } from '../components/ImportCard';
-import { Backdrop, Button, Floating, Glass, Label, Switch, T } from '../components/ui';
+import { Backdrop, Button, Floating, Glass, Label, Loading, Switch, T } from '../components/ui';
 import { notify } from '../lib/dialog';
 import { hasBlockedWord, KIND_MESSAGE } from '../lib/filter';
 import { shrinkPhoto } from '../lib/photos';
@@ -18,6 +19,9 @@ const field = { fontFamily: font.medium, fontSize: 15, color: colors.ink, paddin
 export default function AddRecipe() {
   const { api, changed } = useApp();
   const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ import?: string; id?: string }>();
+  const editingId = params.id;
+  const [loadingExisting, setLoadingExisting] = useState(!!editingId);
   const [photos, setPhotos] = useState<string[]>([]);
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<Category>('Desserts');
@@ -26,7 +30,6 @@ export default function AddRecipe() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([{ qty: '', name: '' }, { qty: '', name: '' }]);
   const [steps, setSteps] = useState<string[]>(['']);
   const [busy, setBusy] = useState(false);
-  const params = useLocalSearchParams<{ import?: string }>();
   const [source, setSource] = useState<VideoSource | null>(null);
   const [partial, setPartial] = useState(false);
   const [isPublic, setIsPublic] = useState(true);
@@ -34,6 +37,24 @@ export default function AddRecipe() {
   /** Ingredients removed from a notes recipe, so steps that still mention them can be flagged. */
   const [removed, setRemoved] = useState<string[]>([]);
   const [rewriting, setRewriting] = useState(false);
+
+  // Editing an existing recipe: load it and fill the form.
+  useEffect(() => {
+    if (!editingId) return;
+    let live = true;
+    api.recipe(editingId).then((r) => {
+      if (!live || !r) return;
+      setTitle(r.title);
+      setCategory(r.category);
+      setTime(r.total_time);
+      setServings(r.servings);
+      setIngredients(r.ingredients.length ? r.ingredients : [{ qty: '', name: '' }]);
+      setSteps(r.steps.length ? r.steps : ['']);
+      setPhotos(r.photos);
+      setIsPublic(r.is_public ?? true);
+    }).finally(() => live && setLoadingExisting(false));
+    return () => { live = false; };
+  }, [editingId]);
 
   // Fill the form from a video import or from notes.
   // Video imports stay private by default (someone else's recipe); notes are the person's own, so sharing stays on.
@@ -97,7 +118,7 @@ export default function AddRecipe() {
     }
   }
 
-  const close = () => (router.canGoBack() ? router.back() : router.replace('/tin'));
+  const close = () => (router.canGoBack() ? router.back() : router.replace(editingId ? `/recipe/${editingId}` : '/tin'));
 
   async function addPhotos() {
     const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, selectionLimit: 8, quality: 0.75 });
@@ -127,7 +148,7 @@ export default function AddRecipe() {
       steps: steps.map((s) => s.trim()).filter(Boolean),
       photos,
       is_public: isPublic,
-      ...(source ?? {}),
+      ...(editingId ? {} : (source ?? {})),
     };
     if (!clean.title) return notify('Add a name', 'Give your recipe a name first.');
     if (!clean.ingredients.length) return notify('Add ingredients', 'Add at least one ingredient.');
@@ -137,9 +158,15 @@ export default function AddRecipe() {
     }
     setBusy(true);
     try {
-      const id = await api.createRecipe(clean);
-      changed();
-      router.replace(`/recipe/${id}`);
+      if (editingId) {
+        await api.updateRecipe(editingId, clean);
+        changed();
+        router.replace(`/recipe/${editingId}`);
+      } else {
+        const id = await api.createRecipe(clean);
+        changed();
+        router.replace(`/recipe/${id}`);
+      }
     } catch (e) {
       notify('Couldn’t save recipe', (e as Error).message);
     } finally {
@@ -147,19 +174,23 @@ export default function AddRecipe() {
     }
   }
 
+  if (loadingExisting) return <View style={{ flex: 1, backgroundColor: colors.bg }}><Loading /></View>;
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <Backdrop variant="violet" />
       <View style={{ paddingTop: insets.top + 10, paddingHorizontal: 20, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', maxWidth: 560, width: '100%', alignSelf: 'center' }}>
         <Pressable onPress={close} style={{ height: 44, justifyContent: 'center' }} accessibilityRole="button"><T size={16} color={colors.ink2}>Cancel</T></Pressable>
-        <T w="bold" size={17}>New Recipe</T>
+        <T w="bold" size={17}>{editingId ? 'Edit Recipe' : 'New Recipe'}</T>
         <Pressable onPress={submit} disabled={busy} style={{ height: 44, justifyContent: 'center' }} accessibilityRole="button"><T w="bold" size={16} color={colors.accent}>Save</T></Pressable>
       </View>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 140 + insets.bottom, gap: 14, maxWidth: 560, width: '100%', alignSelf: 'center' }}>
-          <ImportCard source={source} partial={partial} fromNotes={fromNotes} suggestedCount={suggestedCount}
-            onImported={applyImport} onClear={clearImport} autoFocus={params.import === '1'} />
+          {!editingId ? (
+            <ImportCard source={source} partial={partial} fromNotes={fromNotes} suggestedCount={suggestedCount}
+              onImported={applyImport} onClear={clearImport} autoFocus={params.import === '1'} />
+          ) : null}
 
           {/* Photos */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
@@ -315,7 +346,7 @@ export default function AddRecipe() {
       <Floating bottom={Math.max(insets.bottom, 18)}>
         <Glass radius={34} strong style={{ height: 68, padding: 8, flexDirection: 'row', gap: 8, boxShadow: shadow.float }}>
           <Button title="Cancel" variant="soft" style={{ flex: 1, height: 52 }} onPress={close} />
-          <Button title="Add to Tin" style={{ flex: 1.6, height: 52 }} onPress={submit} busy={busy} />
+          <Button title={editingId ? 'Save changes' : 'Add to Tin'} style={{ flex: 1.6, height: 52 }} onPress={submit} busy={busy} />
         </Glass>
       </Floating>
     </View>
