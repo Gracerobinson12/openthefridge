@@ -23,7 +23,7 @@ export default function Welcome() {
         <View style={{ alignItems: 'center', gap: 18 }}>
           <Image source={ICON} accessibilityIgnoresInvertColors style={{ width: 112, height: 112, borderRadius: 28, boxShadow: '0px 18px 40px rgba(40,25,70,0.18)' }} />
           <View style={{ alignItems: 'center', gap: 8 }}>
-            <T w="heavy" size={40} accessibilityRole="header" style={{ textAlign: 'center' }}>Open the Fridge</T>
+            <T w="heavy" size={40} accessibilityRole="header" style={{ textAlign: 'center' }}> The Fridge</T>
             <T size={17} color={colors.ink2} style={{ textAlign: 'center', lineHeight: 24 }}>
               Pin your recipes, see what everyone's cooking, and share with your people.
             </T>
@@ -55,7 +55,7 @@ export default function Welcome() {
                 </View>
               </View>
               <Button
-                title={ios ? 'How to add to Home Screen' : 'Install Open the Fridge'}
+                title={ios ? 'How to add to Home Screen' : 'Install The Fridge'}
                 icon={ios ? 'share' : undefined}
                 onPress={async () => (ios ? setShowIosHelp(!showIosHelp) : install())}
               />
@@ -65,7 +65,7 @@ export default function Welcome() {
                     ['1', 'Open this page in Safari'],
                     ['2', 'Tap the Share button at the bottom of the screen'],
                     ['3', 'Scroll down, tap “Add to Home Screen”, then Add'],
-                    ['4', 'Open the Fridge icon from your home screen'],
+                    ['4', 'Open The Fridge icon from your home screen'],
                   ].map(([n, text]) => (
                     <View key={n} style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
                       <View style={{ width: 24, height: 24, borderRadius: 8, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' }}>

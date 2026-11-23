@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>%WEB_TITLE%</title>
     <meta name="description" content="Share recipes with your people. Your fridge door, online." />
+    <link rel="canonical" href="https://thefridge.gratiacore.com/" />
 
     <!-- Installable app (PWA) -->
     <link rel="manifest" href="/manifest.json" />
@@ -20,9 +21,29 @@
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
 
     <!-- Link previews (iMessage, Instagram, etc.) -->
-    <meta property="og:title" content="Open the Fridge" />
+    <meta property="og:title" content="The Fridge" />
     <meta property="og:description" content="Share recipes with your people." />
     <meta property="og:image" content="/icons/icon-512.png" />
+    <meta property="og:url" content="https://thefridge.gratiacore.com/" />
+
+    <!-- Tells search engines what this site is and who runs it -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "The Fridge",
+        "url": "https://thefridge.gratiacore.com",
+        "applicationCategory": "LifestyleApplication",
+        "operatingSystem": "Web, iOS",
+        "description": "Share recipes with your people. Your fridge door, online.",
+        "founder": { "@type": "Person", "name": "Grace Robinson" },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Gratia Core Enterprise LLC",
+          "url": "https://gratiacore.com"
+        }
+      }
+    </script>
 
     <style id="expo-reset">
       html, body { height: 100%; background: #F6F3FA; }
@@ -32,7 +53,7 @@
   </head>
 
   <body>
-    <noscript>You need to enable JavaScript to run Open the Fridge.</noscript>
+    <noscript>You need to enable JavaScript to run The Fridge.</noscript>
     <div id="root"></div>
     <script>
       // Keep the browser's install prompt so the Install button can show it later.
