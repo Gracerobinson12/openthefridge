@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Open the Fridge",
-    "slug": "openthefridge",
+    "name": " The Fridge",
+    "slug": "Thefridge",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,8 +10,8 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.gratiacore.openthefridge",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "Open the Fridge uses your photos so you can add pictures to your recipes.",
-        "NSCameraUsageDescription": "Open the Fridge uses the camera so you can take pictures of your recipes."
+        "NSPhotoLibraryUsageDescription": " The Fridge uses your photos so you can add pictures to your recipes.",
+        "NSCameraUsageDescription": " The Fridge uses the camera so you can take pictures of your recipes."
       },
       "config": {
         "usesNonExemptEncryption": false
@@ -40,7 +40,7 @@
       "favicon": "./assets/favicon.png",
       "output": "single",
       "bundler": "metro",
-      "name": "Open the Fridge",
+      "name": "The Fridge",
       "shortName": "Fridge",
       "themeColor": "#F6F3FA",
       "backgroundColor": "#F6F3FA",

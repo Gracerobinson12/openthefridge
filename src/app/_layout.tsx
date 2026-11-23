@@ -19,7 +19,7 @@ function AuthGate() {
   const segments = useSegments();
   useEffect(() => {
     if (!ready) return;
-    const open = ['welcome', 'sign-in', 'legal', 'terms', 'privacy', 'guidelines', 'support'].includes(segments[0] as string);
+    const open = ['welcome', 'sign-in', 'legal', 'terms', 'privacy', 'guidelines', 'support', 'about'].includes(segments[0] as string);
     if (!me && !open) router.replace('/welcome');
     if (me && (segments[0] === 'welcome' || segments[0] === 'sign-in')) router.replace('/');
   }, [ready, me, segments]);
